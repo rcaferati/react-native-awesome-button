@@ -3,28 +3,38 @@ import renderer, { act } from 'react-test-renderer';
 import AwesomeButton from '../Button';
 
 jest.mock('../helpers', () => {
+  const actualHelpers = jest.requireActual('../helpers');
   const createAnimation = () => ({
     start: (callback) => callback && callback({ finished: true }),
     stop: jest.fn(),
   });
 
   return {
+    ...actualHelpers,
     animateElastic: jest.fn(() => createAnimation()),
     animateSpring: jest.fn(() => createAnimation()),
     animateTiming: jest.fn(() => createAnimation()),
   };
 });
 
+const mockedHelpers = jest.requireMock('../helpers');
+const defaultAnimateSpringImplementation =
+  mockedHelpers.animateSpring.getMockImplementation();
+
 const createPressEvent = () => ({
   nativeEvent: {},
 });
 
+const flushMicrotasks = async () => Promise.resolve();
+
 describe('AwesomeButton interactions', () => {
   const originalRequestAnimationFrame = global.requestAnimationFrame;
   const originalCancelAnimationFrame = global.cancelAnimationFrame;
+  const originalWindow = global.window;
 
   beforeEach(() => {
     jest.useFakeTimers();
+    global.window = global;
     global.requestAnimationFrame = (callback) => {
       callback();
       return 0;
@@ -32,14 +42,18 @@ describe('AwesomeButton interactions', () => {
     global.cancelAnimationFrame = jest.fn();
   });
 
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
+  afterEach(async () => {
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+      await flushMicrotasks();
+    });
     jest.useRealTimers();
     global.requestAnimationFrame = originalRequestAnimationFrame;
     global.cancelAnimationFrame = originalCancelAnimationFrame;
+    global.window = originalWindow;
   });
 
-  it('dispatches onPress from the press handler without requiring a hold gesture', () => {
+  it('dispatches onPress from the press handler without requiring a hold gesture', async () => {
     const onPress = jest.fn();
     const component = renderer.create(
       <AwesomeButton onPress={onPress}>Tap</AwesomeButton>
@@ -48,8 +62,48 @@ describe('AwesomeButton interactions', () => {
       testID: 'aws-btn-content-view',
     });
 
-    act(() => {
+    await act(async () => {
       pressable.props.onPress();
+      await flushMicrotasks();
+    });
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('defers onPress until the configured release frames have passed', async () => {
+    const onPress = jest.fn();
+    let timestamp = 0;
+
+    global.requestAnimationFrame = (callback) =>
+      setTimeout(() => {
+        timestamp += 16;
+        callback(timestamp);
+      }, 16);
+    global.cancelAnimationFrame = (handle) => clearTimeout(handle);
+
+    const component = renderer.create(
+      <AwesomeButton onPress={onPress}>Tap</AwesomeButton>
+    );
+    const pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    await act(async () => {
+      pressable.props.onPress();
+    });
+
+    expect(onPress).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+      await flushMicrotasks();
+    });
+
+    expect(onPress).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+      await flushMicrotasks();
     });
 
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -73,7 +127,46 @@ describe('AwesomeButton interactions', () => {
     expect(onPress).not.toHaveBeenCalled();
   });
 
-  it('does not allow dangerouslySetPressableProps to override core press handlers', () => {
+  it('defers onPressOut observers until the release frames have passed', async () => {
+    const onPressOut = jest.fn();
+    let timestamp = 0;
+
+    global.requestAnimationFrame = (callback) =>
+      setTimeout(() => {
+        timestamp += 16;
+        callback(timestamp);
+      }, 16);
+    global.cancelAnimationFrame = (handle) => clearTimeout(handle);
+
+    const component = renderer.create(
+      <AwesomeButton onPressOut={onPressOut}>Tap</AwesomeButton>
+    );
+    const pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    await act(async () => {
+      pressable.props.onPressOut(createPressEvent());
+    });
+
+    expect(onPressOut).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+      await flushMicrotasks();
+    });
+
+    expect(onPressOut).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+      await flushMicrotasks();
+    });
+
+    expect(onPressOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not allow dangerouslySetPressableProps to override core press handlers', async () => {
     const onPress = jest.fn();
     const dangerousOnPress = jest.fn();
     const dangerousOnPressIn = jest.fn();
@@ -94,11 +187,12 @@ describe('AwesomeButton interactions', () => {
       testID: 'aws-btn-content-view',
     });
 
-    act(() => {
+    await act(async () => {
       pressable.props.onPressIn(createPressEvent());
       pressable.props.onPress();
       pressable.props.onPressOut(createPressEvent());
       jest.runAllTimers();
+      await flushMicrotasks();
     });
 
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -153,7 +247,7 @@ describe('AwesomeButton interactions', () => {
     });
   });
 
-  it('starts and completes progress button flows through the onPress callback contract', () => {
+  it('starts and completes progress button flows through the onPress callback contract', async () => {
     const onProgressStart = jest.fn();
     const onProgressEnd = jest.fn();
     const onPress = jest.fn((next) => next && next());
@@ -171,9 +265,10 @@ describe('AwesomeButton interactions', () => {
       testID: 'aws-btn-content-view',
     });
 
-    act(() => {
+    await act(async () => {
       pressable.props.onPress();
       jest.runAllTimers();
+      await flushMicrotasks();
     });
 
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -182,7 +277,7 @@ describe('AwesomeButton interactions', () => {
     expect(onProgressEnd).toHaveBeenCalledTimes(1);
   });
 
-  it('does not emit duplicate release callbacks when progress is interrupted by press-out', () => {
+  it('does not emit duplicate release callbacks when progress is interrupted by press-out', async () => {
     const onPressedOut = jest.fn();
     const onPress = jest.fn((next) => next && next());
     let timestamp = 0;
@@ -207,13 +302,99 @@ describe('AwesomeButton interactions', () => {
       testID: 'aws-btn-content-view',
     });
 
-    act(() => {
+    await act(async () => {
       pressable.props.onPressIn(createPressEvent());
       pressable.props.onPress();
       pressable.props.onPressOut(createPressEvent());
       jest.runAllTimers();
+      await flushMicrotasks();
+      jest.runAllTimers();
+      await flushMicrotasks();
     });
 
     expect(onPressedOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not restart progress when a blocked loading touch is released after loading ends', async () => {
+    let finishProgress;
+    const onPress = jest.fn((next) => {
+      finishProgress = next;
+    });
+    const component = renderer.create(
+      <AwesomeButton progress onPress={onPress}>
+        Progress
+      </AwesomeButton>
+    );
+    const pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    await act(async () => {
+      pressable.props.onPressIn(createPressEvent());
+      pressable.props.onPressOut(createPressEvent());
+      pressable.props.onPress();
+      jest.runAllTimers();
+      await flushMicrotasks();
+    });
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(typeof finishProgress).toBe('function');
+
+    await act(async () => {
+      pressable.props.onPressIn(createPressEvent());
+    });
+
+    await act(async () => {
+      finishProgress();
+      jest.runAllTimers();
+      await flushMicrotasks();
+      jest.runAllTimers();
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      pressable.props.onPressOut(createPressEvent());
+      pressable.props.onPress();
+      jest.runAllTimers();
+      await flushMicrotasks();
+    });
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows a new tap to interrupt the release animation lock on non-progress buttons', async () => {
+    const onPress = jest.fn();
+    const lockedAnimation = {
+      start: () => undefined,
+      stop: jest.fn(),
+    };
+
+    mockedHelpers.animateSpring.mockImplementation(() => lockedAnimation);
+
+    try {
+      const component = renderer.create(
+        <AwesomeButton springRelease onPress={onPress}>
+          Tap
+        </AwesomeButton>
+      );
+      const pressable = component.root.findByProps({
+        testID: 'aws-btn-content-view',
+      });
+
+      await act(async () => {
+        pressable.props.onPressIn(createPressEvent());
+        pressable.props.onPressOut(createPressEvent());
+        pressable.props.onPressIn(createPressEvent());
+        pressable.props.onPressOut(createPressEvent());
+        pressable.props.onPress();
+        await flushMicrotasks();
+      });
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    } finally {
+      mockedHelpers.animateSpring.mockImplementation(
+        defaultAnimateSpringImplementation
+      );
+    }
   });
 });
