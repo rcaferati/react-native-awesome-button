@@ -277,6 +277,132 @@ describe('AwesomeButton interactions', () => {
     expect(onProgressEnd).toHaveBeenCalledTimes(1);
   });
 
+  it('still dispatches onPress when the parent rerenders during the deferred progress window', async () => {
+    const consumerOnPress = jest.fn((next) => next && next());
+    let timestamp = 0;
+
+    global.requestAnimationFrame = (callback) =>
+      setTimeout(() => {
+        timestamp += 16;
+        callback(timestamp);
+      }, 16);
+    global.cancelAnimationFrame = (handle) => clearTimeout(handle);
+
+    function Wrapper() {
+      const [tick, setTick] = React.useState(0);
+
+      return (
+        <AwesomeButton
+          progress
+          onProgressStart={() => {
+            setTick((value) => value + 1);
+          }}
+          onPress={(next) => {
+            consumerOnPress(next);
+          }}
+        >
+          {`Progress ${tick}`}
+        </AwesomeButton>
+      );
+    }
+
+    const component = renderer.create(<Wrapper />);
+    const pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    await act(async () => {
+      pressable.props.onPress();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+      await flushMicrotasks();
+    });
+
+    expect(consumerOnPress).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+      await flushMicrotasks();
+    });
+
+    expect(consumerOnPress).toHaveBeenCalledTimes(1);
+    expect(typeof consumerOnPress.mock.calls[0][0]).toBe('function');
+  });
+
+  it('rolls back a deferred progress press when the button becomes disabled mid-flight', async () => {
+    const consumerOnPress = jest.fn();
+    let timestamp = 0;
+
+    global.requestAnimationFrame = (callback) =>
+      setTimeout(() => {
+        timestamp += 16;
+        callback(timestamp);
+      }, 16);
+    global.cancelAnimationFrame = (handle) => clearTimeout(handle);
+
+    function Wrapper() {
+      const [disabled, setDisabled] = React.useState(false);
+
+      return (
+        <AwesomeButton
+          disabled={disabled}
+          progress
+          onProgressStart={() => {
+            setDisabled(true);
+          }}
+          onPress={(next) => {
+            consumerOnPress(next);
+          }}
+        >
+          Progress
+        </AwesomeButton>
+      );
+    }
+
+    const component = renderer.create(<Wrapper />);
+    const pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    await act(async () => {
+      pressable.props.onPress();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+      await flushMicrotasks();
+    });
+
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-view' }).props
+        .accessibilityState
+    ).toMatchObject({
+      busy: true,
+      disabled: true,
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+      await flushMicrotasks();
+      jest.runAllTimers();
+      await flushMicrotasks();
+    });
+
+    expect(consumerOnPress).not.toHaveBeenCalled();
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-view' }).props
+        .accessibilityState
+    ).toMatchObject({
+      disabled: true,
+    });
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-view' }).props
+        .accessibilityState?.busy
+    ).not.toBe(true);
+  });
+
   it('does not emit duplicate release callbacks when progress is interrupted by press-out', async () => {
     const onPressedOut = jest.fn();
     const onPress = jest.fn((next) => next && next());
