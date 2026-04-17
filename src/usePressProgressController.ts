@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Animated, type GestureResponderEvent } from 'react-native';
 import { frameThrower } from '@rcaferati/wac';
 import debounce from 'lodash.debounce';
@@ -85,14 +92,30 @@ const usePressProgressController = ({
   const pressOutObserverFrameTokenRef = useRef(0);
   const pressAnimation = useRef<Animated.CompositeAnimation | null>(null);
   const releaseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const progressLoadingAnimationRef =
+    useRef<Animated.CompositeAnimation | null>(null);
+  const progressContentOutAnimationRef =
+    useRef<Animated.CompositeAnimation | null>(null);
+  const progressStartedRef = useRef(false);
+  const onPressRef = useRef(onPress);
+  const onPressOutRef = useRef(onPressOut);
+  const disabledRef = useRef(disabled);
+  const hasChildrenRef = useRef(hasChildren);
+
+  useLayoutEffect(() => {
+    onPressRef.current = onPress;
+    onPressOutRef.current = onPressOut;
+    disabledRef.current = disabled;
+    hasChildrenRef.current = hasChildren;
+  });
 
   const debouncedPress = useMemo<DebouncedPressHandler>(() => {
     if (debouncedPressTime === 0) {
-      return (next) => onPress(next);
+      return (next) => onPressRef.current(next);
     }
 
     const handler = debounce(
-      (next?: ProgressCompletionHandler) => onPress(next),
+      (next?: ProgressCompletionHandler) => onPressRef.current(next),
       debouncedPressTime,
       {
         trailing: false,
@@ -101,31 +124,45 @@ const usePressProgressController = ({
     );
 
     return handler as DebouncedPressHandler;
-  }, [debouncedPressTime, onPress]);
+  }, [debouncedPressTime]);
+  const debouncedPressRef = useRef<DebouncedPressHandler>(debouncedPress);
+
+  useLayoutEffect(() => {
+    debouncedPressRef.current = debouncedPress;
+  }, [debouncedPress]);
+
+  const stopProgressStartAnimations = useCallback(() => {
+    progressLoadingAnimationRef.current?.stop();
+    progressContentOutAnimationRef.current?.stop();
+    progressLoadingAnimationRef.current = null;
+    progressContentOutAnimationRef.current = null;
+  }, []);
 
   const cancelPendingFrames = useCallback(() => {
     cancelFrame(progressEndFrameRef.current);
     clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
     cancelFrame(releaseFrameRef.current);
     cancelFrame(progressStartFrameRef.current);
+    stopProgressStartAnimations();
     progressEndFrameRef.current = null;
     releasedGestureClearTimeoutRef.current = null;
     releaseFrameRef.current = null;
     progressStartFrameRef.current = null;
     activeGestureDispositionRef.current = 'idle';
     releasedGestureDispositionRef.current = 'idle';
+    progressStartedRef.current = false;
     pressActionFrameTokenRef.current += 1;
     pressOutObserverFrameTokenRef.current += 1;
-  }, []);
+  }, [stopProgressStartAnimations]);
 
   useEffect(() => {
     return () => {
       cancelPendingFrames();
       pressAnimation.current?.stop();
       releaseAnimationRef.current?.stop();
-      debouncedPress.cancel?.();
+      debouncedPressRef.current.cancel?.();
     };
-  }, [cancelPendingFrames, debouncedPress]);
+  }, [cancelPendingFrames]);
 
   const animatePressIn = useCallback(() => {
     pressAnimation.current = Animated.parallel([
@@ -160,16 +197,25 @@ const usePressProgressController = ({
   ]);
 
   const animateLoadingStart = useCallback(() => {
+    progressLoadingAnimationRef.current?.stop();
     animatedLoading.setValue(0);
-    animateTiming({
+    const animation = animateTiming({
       variable: animatedLoading,
       toValue: 1,
       duration: progressLoadingTime,
-    }).start();
+    });
+
+    progressLoadingAnimationRef.current = animation;
+    animation.start(() => {
+      if (progressLoadingAnimationRef.current === animation) {
+        progressLoadingAnimationRef.current = null;
+      }
+    });
   }, [animatedLoading, progressLoadingTime]);
 
   const animateContentOut = useCallback(() => {
-    Animated.parallel([
+    progressContentOutAnimationRef.current?.stop();
+    const animation = Animated.parallel([
       animateTiming({
         variable: loadingOpacity,
         toValue: 1,
@@ -182,7 +228,14 @@ const usePressProgressController = ({
         variable: activityOpacity,
         toValue: 1,
       }),
-    ]).start();
+    ]);
+
+    progressContentOutAnimationRef.current = animation;
+    animation.start(() => {
+      if (progressContentOutAnimationRef.current === animation) {
+        progressContentOutAnimationRef.current = null;
+      }
+    });
   }, [activityOpacity, loadingOpacity, textOpacity]);
 
   const animateRelease = useCallback(
@@ -274,6 +327,7 @@ const usePressProgressController = ({
       cancelFrame(releaseFrameRef.current);
       releaseFrameRef.current = null;
       cancelFrame(progressEndFrameRef.current);
+      stopProgressStartAnimations();
       progressEndFrameRef.current = requestFrame(() => {
         progressEndFrameRef.current = null;
         animateTiming({
@@ -297,6 +351,7 @@ const usePressProgressController = ({
           ]).start(() => {
             animateRelease(() => {
               progressing.current = false;
+              progressStartedRef.current = false;
               setActivity(false);
               callback?.();
               onProgressEnd();
@@ -313,6 +368,7 @@ const usePressProgressController = ({
       onProgressEnd,
       progress,
       textOpacity,
+      stopProgressStartAnimations,
     ]
   );
 
@@ -331,11 +387,46 @@ const usePressProgressController = ({
 
   const startProgress = useCallback(() => {
     progressing.current = true;
+    progressStartedRef.current = true;
     onProgressStart();
     setActivity(true);
     animateLoadingStart();
     animateContentOut();
   }, [animateContentOut, animateLoadingStart, onProgressStart]);
+
+  const rollbackProgressPress = useCallback(() => {
+    if (
+      progressStartFrameRef.current !== null &&
+      progressStartedRef.current !== true
+    ) {
+      cancelFrame(progressStartFrameRef.current);
+      progressStartFrameRef.current = null;
+      progressing.current = false;
+      progressStartedRef.current = false;
+      return;
+    }
+
+    stopProgressStartAnimations();
+    progressStartFrameRef.current = null;
+    progressStartedRef.current = false;
+    progressing.current = false;
+    animatedLoading.setValue(0);
+    textOpacity.setValue(1);
+    activityOpacity.setValue(0);
+    loadingOpacity.setValue(0);
+    setActivity(false);
+    animateRelease(() => {
+      onProgressEnd();
+    });
+  }, [
+    activityOpacity,
+    animateRelease,
+    animatedLoading,
+    loadingOpacity,
+    onProgressEnd,
+    stopProgressStartAnimations,
+    textOpacity,
+  ]);
 
   const setActiveGestureDisposition = useCallback(
     (disposition: PressGestureDisposition) => {
@@ -378,7 +469,7 @@ const usePressProgressController = ({
   }, []);
 
   const invokePressAction = useCallback(
-    (next?: ProgressCompletionHandler) => {
+    (next?: ProgressCompletionHandler, onAbort?: () => void) => {
       const frameThrowToken = pressActionFrameTokenRef.current + 1;
       pressActionFrameTokenRef.current = frameThrowToken;
 
@@ -387,36 +478,34 @@ const usePressProgressController = ({
           return;
         }
 
-        if (disabled === true || hasChildren === false) {
+        if (disabledRef.current === true || hasChildrenRef.current === false) {
+          onAbort?.();
           return;
         }
 
         debouncedPress(next);
       });
     },
-    [debouncedPress, disabled, hasChildren]
+    [debouncedPress]
   );
 
-  const invokePressOutObserver = useCallback(
-    (event: GestureResponderEvent) => {
-      event.persist?.();
-      const frameThrowToken = pressOutObserverFrameTokenRef.current + 1;
-      pressOutObserverFrameTokenRef.current = frameThrowToken;
+  const invokePressOutObserver = useCallback((event: GestureResponderEvent) => {
+    event.persist?.();
+    const frameThrowToken = pressOutObserverFrameTokenRef.current + 1;
+    pressOutObserverFrameTokenRef.current = frameThrowToken;
 
-      frameThrower(PRESS_OUT_OBSERVER_FRAME_THROW).then(() => {
-        if (pressOutObserverFrameTokenRef.current !== frameThrowToken) {
-          return;
-        }
+    frameThrower(PRESS_OUT_OBSERVER_FRAME_THROW).then(() => {
+      if (pressOutObserverFrameTokenRef.current !== frameThrowToken) {
+        return;
+      }
 
-        if (disabled === true || hasChildren === false) {
-          return;
-        }
+      if (disabledRef.current === true || hasChildrenRef.current === false) {
+        return;
+      }
 
-        onPressOut(event);
-      });
-    },
-    [disabled, hasChildren, onPressOut]
-  );
+      onPressOutRef.current(event);
+    });
+  }, []);
 
   const handlePress = useCallback(() => {
     const gestureDisposition = consumeGestureDisposition();
@@ -444,7 +533,7 @@ const usePressProgressController = ({
         progressStartFrameRef.current = null;
         startProgress();
       });
-      invokePressAction(animateProgressEnd);
+      invokePressAction(animateProgressEnd, rollbackProgressPress);
       return;
     }
 
@@ -456,6 +545,7 @@ const usePressProgressController = ({
     hasChildren,
     invokePressAction,
     progress,
+    rollbackProgressPress,
     startProgress,
   ]);
 
