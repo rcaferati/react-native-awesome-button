@@ -19,6 +19,16 @@ const TRANSITION_VARIANTS: ButtonVariant[] = [
   'danger',
 ];
 const TEXT_TRANSITION_LABELS = ['welcome', 'Level 2', 'Mission#42', 'Go#3'];
+const HEAVY_JS_TASK_MS = 900;
+
+function simulateHeavyJsTask(durationMs: number) {
+  const start = Date.now();
+
+  while (Date.now() - start < durationMs) {
+    // Intentionally block the JS thread to simulate expensive work.
+    Math.sqrt(Math.random() * durationMs);
+  }
+}
 
 export default function Example({ index }: ThemeExampleProps) {
   const theme = getTheme(index);
@@ -42,6 +52,12 @@ export default function Example({ index }: ThemeExampleProps) {
     setTextTransitionIndex((currentIndex) => {
       return (currentIndex + 1) % TEXT_TRANSITION_LABELS.length;
     });
+  };
+  const handleHeavyStretchProgressPress: ProgressDemoHandler = (
+    next?: ProgressCompletionHandler
+  ) => {
+    simulateHeavyJsTask(HEAVY_JS_TASK_MS);
+    next?.();
   };
 
   useEffect(() => {
@@ -382,6 +398,17 @@ export default function Example({ index }: ThemeExampleProps) {
             stretch
           >
             Primary Large Stretch
+          </ThemedButton>
+          <ThemedButton
+            config={theme}
+            style={styles.button}
+            type="primary"
+            size="large"
+            progress
+            stretch
+            onPress={handleHeavyStretchProgressPress}
+          >
+            Stretch Progress + JS Load
           </ThemedButton>
         </Section>
       </Container>

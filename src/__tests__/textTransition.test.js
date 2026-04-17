@@ -11,12 +11,14 @@ import {
 } from '../textTransition';
 
 jest.mock('../helpers', () => {
+  const actualHelpers = jest.requireActual('../helpers');
   const createAnimation = () => ({
     start: (callback) => callback?.({ finished: true }),
     stop: jest.fn(),
   });
 
   return {
+    ...actualHelpers,
     animateElastic: jest.fn(() => createAnimation()),
     animateSpring: jest.fn(() => createAnimation()),
     animateTiming: jest.fn(() => createAnimation()),

@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, type GestureResponderEvent } from 'react-native';
+import { frameThrower } from '@rcaferati/wac';
 import debounce from 'lodash.debounce';
 import { animateElastic, animateSpring, animateTiming } from './helpers';
 import { cancelFrame, requestFrame } from './frameLoop';
 import { ANIMATED_TIMING_OFF, DEFAULT_DEBOUNCED_PRESS_TIME } from './constants';
 import type { AwesomeButtonOnPress, ProgressCompletionHandler } from './types';
+
+// WAC's frameThrower waits "future frames" plus one extra layout hop,
+// so 1 gives us roughly two animation frames before running onPress.
+const PRESS_ACTION_FRAME_THROW = 1;
+const PRESS_OUT_OBSERVER_FRAME_THROW = 1;
 
 type PressProgressControllerOptions = {
   activeOpacity: number;
@@ -33,6 +39,8 @@ type PressProgressControllerOptions = {
 type DebouncedPressHandler = AwesomeButtonOnPress & {
   cancel?: () => void;
 };
+
+type PressGestureDisposition = 'idle' | 'armed' | 'blocked';
 
 const usePressProgressController = ({
   activeOpacity,
@@ -64,11 +72,19 @@ const usePressProgressController = ({
   const progressEndFrameRef = useRef<ReturnType<typeof requestFrame> | null>(
     null
   );
+  const releasedGestureClearTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const releaseFrameRef = useRef<ReturnType<typeof requestFrame> | null>(null);
   const progressStartFrameRef = useRef<ReturnType<typeof requestFrame> | null>(
     null
   );
+  const activeGestureDispositionRef = useRef<PressGestureDisposition>('idle');
+  const releasedGestureDispositionRef = useRef<PressGestureDisposition>('idle');
+  const pressActionFrameTokenRef = useRef(0);
+  const pressOutObserverFrameTokenRef = useRef(0);
   const pressAnimation = useRef<Animated.CompositeAnimation | null>(null);
+  const releaseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const debouncedPress = useMemo<DebouncedPressHandler>(() => {
     if (debouncedPressTime === 0) {
@@ -89,17 +105,24 @@ const usePressProgressController = ({
 
   const cancelPendingFrames = useCallback(() => {
     cancelFrame(progressEndFrameRef.current);
+    clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
     cancelFrame(releaseFrameRef.current);
     cancelFrame(progressStartFrameRef.current);
     progressEndFrameRef.current = null;
+    releasedGestureClearTimeoutRef.current = null;
     releaseFrameRef.current = null;
     progressStartFrameRef.current = null;
+    activeGestureDispositionRef.current = 'idle';
+    releasedGestureDispositionRef.current = 'idle';
+    pressActionFrameTokenRef.current += 1;
+    pressOutObserverFrameTokenRef.current += 1;
   }, []);
 
   useEffect(() => {
     return () => {
       cancelPendingFrames();
       pressAnimation.current?.stop();
+      releaseAnimationRef.current?.stop();
       debouncedPress.cancel?.();
     };
   }, [cancelPendingFrames, debouncedPress]);
@@ -178,6 +201,7 @@ const usePressProgressController = ({
         }
 
         releasing.current = false;
+        releaseAnimationRef.current = null;
         pressed.current = false;
         callback?.();
         onPressedOut();
@@ -216,6 +240,7 @@ const usePressProgressController = ({
               }),
             ]);
 
+      releaseAnimationRef.current = releaseAnimation;
       releaseAnimation.start(finishRelease);
     },
     [
@@ -226,6 +251,18 @@ const usePressProgressController = ({
       springRelease,
     ]
   );
+
+  const interruptRelease = useCallback(() => {
+    if (releasing.current !== true) {
+      return;
+    }
+
+    releaseAnimationRef.current?.stop();
+    releaseAnimationRef.current = null;
+    releasing.current = false;
+    pressed.current = false;
+    onPressedOut();
+  }, [onPressedOut]);
 
   const animateProgressEnd = useCallback<ProgressCompletionHandler>(
     (callback) => {
@@ -300,14 +337,98 @@ const usePressProgressController = ({
     animateContentOut();
   }, [animateContentOut, animateLoadingStart, onProgressStart]);
 
+  const setActiveGestureDisposition = useCallback(
+    (disposition: PressGestureDisposition) => {
+      clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
+      releasedGestureClearTimeoutRef.current = null;
+      releasedGestureDispositionRef.current = 'idle';
+      activeGestureDispositionRef.current = disposition;
+    },
+    []
+  );
+
+  const consumeGestureDisposition = useCallback(() => {
+    const disposition =
+      releasedGestureDispositionRef.current !== 'idle'
+        ? releasedGestureDispositionRef.current
+        : activeGestureDispositionRef.current;
+
+    activeGestureDispositionRef.current = 'idle';
+    releasedGestureDispositionRef.current = 'idle';
+    clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
+    releasedGestureClearTimeoutRef.current = null;
+
+    return disposition;
+  }, []);
+
+  const finalizeGestureDisposition = useCallback(() => {
+    const disposition = activeGestureDispositionRef.current;
+
+    if (disposition === 'idle') {
+      return;
+    }
+
+    activeGestureDispositionRef.current = 'idle';
+    releasedGestureDispositionRef.current = disposition;
+    clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
+    releasedGestureClearTimeoutRef.current = setTimeout(() => {
+      releasedGestureClearTimeoutRef.current = null;
+      releasedGestureDispositionRef.current = 'idle';
+    }, 0);
+  }, []);
+
   const invokePressAction = useCallback(
     (next?: ProgressCompletionHandler) => {
-      debouncedPress(next);
+      const frameThrowToken = pressActionFrameTokenRef.current + 1;
+      pressActionFrameTokenRef.current = frameThrowToken;
+
+      frameThrower(PRESS_ACTION_FRAME_THROW).then(() => {
+        if (pressActionFrameTokenRef.current !== frameThrowToken) {
+          return;
+        }
+
+        if (disabled === true || hasChildren === false) {
+          return;
+        }
+
+        debouncedPress(next);
+      });
     },
-    [debouncedPress]
+    [debouncedPress, disabled, hasChildren]
+  );
+
+  const invokePressOutObserver = useCallback(
+    (event: GestureResponderEvent) => {
+      event.persist?.();
+      const frameThrowToken = pressOutObserverFrameTokenRef.current + 1;
+      pressOutObserverFrameTokenRef.current = frameThrowToken;
+
+      frameThrower(PRESS_OUT_OBSERVER_FRAME_THROW).then(() => {
+        if (pressOutObserverFrameTokenRef.current !== frameThrowToken) {
+          return;
+        }
+
+        if (disabled === true || hasChildren === false) {
+          return;
+        }
+
+        onPressOut(event);
+      });
+    },
+    [disabled, hasChildren, onPressOut]
   );
 
   const handlePress = useCallback(() => {
+    const gestureDisposition = consumeGestureDisposition();
+
+    if (gestureDisposition === 'blocked') {
+      return;
+    }
+
+    if (gestureDisposition === 'idle' && releasing.current === true) {
+      return;
+    }
+
     if (
       disabled === true ||
       hasChildren === false ||
@@ -329,6 +450,7 @@ const usePressProgressController = ({
 
     invokePressAction();
   }, [
+    consumeGestureDisposition,
     animateProgressEnd,
     disabled,
     hasChildren,
@@ -343,18 +465,40 @@ const usePressProgressController = ({
       releaseFrameRef.current = null;
 
       if (
+        disabled !== true &&
+        hasChildren === true &&
+        releasing.current === true &&
+        progressing.current === false &&
+        pressed.current === false
+      ) {
+        interruptRelease();
+      }
+
+      if (
         disabled === true ||
         hasChildren === false ||
         progressing.current === true ||
         pressed.current === true
       ) {
+        if (progressing.current === true || pressed.current === true) {
+          setActiveGestureDisposition('blocked');
+        }
+
         return;
       }
 
+      setActiveGestureDisposition('armed');
       onPressIn(event);
       animatePressIn();
     },
-    [animatePressIn, disabled, hasChildren, onPressIn]
+    [
+      animatePressIn,
+      disabled,
+      hasChildren,
+      interruptRelease,
+      onPressIn,
+      setActiveGestureDisposition,
+    ]
   );
 
   const handlePressOut = useCallback(
@@ -363,7 +507,12 @@ const usePressProgressController = ({
         return;
       }
 
-      onPressOut(event);
+      invokePressOutObserver(event);
+      finalizeGestureDisposition();
+
+      if (releasing.current === true) {
+        return;
+      }
 
       if (progress === true && progressing.current === true) {
         return;
@@ -371,7 +520,14 @@ const usePressProgressController = ({
 
       scheduleRelease();
     },
-    [disabled, hasChildren, onPressOut, progress, scheduleRelease]
+    [
+      disabled,
+      finalizeGestureDisposition,
+      hasChildren,
+      invokePressOutObserver,
+      progress,
+      scheduleRelease,
+    ]
   );
 
   return {
