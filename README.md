@@ -9,8 +9,22 @@ The library exports:
 - `getTheme`
 - explicit TypeScript types such as `AwesomeButtonProps`, `ThemedButtonProps`, `ButtonWidth`, `ThemeName`, `ButtonVariant`, and `ButtonSize`
 
+| <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-blue-new.gif" /> | <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-rick.gif" /> | <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-cartman.gif" /> |
+| --- | --- | --- |
+
 ## Install
 
+Try the live package demo on [expo.dev](https://snack.expo.dev/@rcaferati/react-native-awesome-button).
+
+[<img src="https://caferati.dev/images/github/expo-snack.png" width="800" />](https://snack.expo.dev/@rcaferati/react-native-awesome-button)
+
+## Figma File
+
+Import the button visuals directly into your [Figma](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue) project.
+
+[<img src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/figma.png" width="800" />](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue)
+
+## Install
 ```bash
 npm install @rcaferati/react-native-awesome-button
 ```
@@ -284,6 +298,12 @@ The `demo/` app is an Expo SDK 52 compatibility harness for:
 - extra-content button compositions
 
 See [`demo/README.md`](./demo/README.md) for demo-specific instructions.
+
+## Web Version
+
+The React web sibling of this component lives at [rcaferati/react-awesome-button](https://github.com/rcaferati/react-awesome-button).
+
+[<img src="https://caferati.dev/images/github/awesome-button-web.png" width="800" />](https://awesome-button.caferati.dev)
 
 ## License
 
