@@ -1,5 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Animated, Image } from 'react-native';
+import {
+  Animated,
+  Image,
+  StyleSheet,
+  type ImageSourcePropType,
+} from 'react-native';
+import type { ThemeCharacterConfig, ThemeCharacterName } from '../types';
 
 const styles = StyleSheet.create({
   container: {
@@ -14,7 +20,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const characters: any = {
+const characters: Partial<Record<ThemeCharacterName, ThemeCharacterConfig>> = {
   bojack: {
     id: 1,
     width: 492 / 2,
@@ -74,10 +80,14 @@ const ASSETS = [
   require('../assets/batman.png'),
   require('../assets/mysterion.png'),
   require('../assets/summer.png'),
-];
+] as ImageSourcePropType[];
 
-const Character = ({ char = 'rick' }) => {
-  const image: any = characters[char];
+type CharacterProps = {
+  char?: ThemeCharacterName;
+};
+
+const Character = ({ char = 'rick' }: CharacterProps) => {
+  const image = characters[char];
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   if (!image) {

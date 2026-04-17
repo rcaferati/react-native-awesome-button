@@ -1,36 +1,66 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Animated } from 'react-native';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  LayoutChangeEvent,
+  StyleProp,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { animateLoop } from './helpers';
 import { styles } from './styles';
 
-const Placeholder = ({ animated, style }: any) => {
-  const animating = useRef(false);
+type PlaceholderProps = {
+  animated?: boolean;
+  style?: StyleProp<ViewStyle>;
+};
+
+const Placeholder = ({ animated = false, style }: PlaceholderProps) => {
+  const loopAnimation = useRef<Animated.CompositeAnimation | null>(null);
   const [width, setWidth] = useState(0);
   const animatedValue = useRef(new Animated.Value(0)).current;
 
+  const stopLoop = useCallback(() => {
+    if (loopAnimation.current) {
+      loopAnimation.current.stop();
+      loopAnimation.current = null;
+    }
+
+    animatedValue.stopAnimation();
+    animatedValue.setValue(0);
+  }, [animatedValue]);
+
   useEffect(() => {
-    if (width > 0 && animating.current === false && animated === true) {
-      animating.current = true;
-      animateLoop({
+    stopLoop();
+
+    if (width > 0 && animated === true) {
+      loopAnimation.current = animateLoop({
         variable: animatedValue,
         toValue: 1,
       });
     }
-  }, [width]);
+
+    return stopLoop;
+  }, [animated, animatedValue, stopLoop, width]);
+
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextWidth = event.nativeEvent.layout.width;
+
+    setWidth((currentWidth) =>
+      currentWidth === nextWidth ? currentWidth : nextWidth
+    );
+  }, []);
 
   return (
     <View
-      style={[styles.container__placeholder, ...style]}
-      onLayout={(event) => {
-        setWidth(event.nativeEvent.layout.width);
-      }}
+      style={[styles.container__placeholder, style]}
+      onLayout={handleLayout}
     >
       {animated === true && (
         <Animated.View
           testID="aws-btn-content-placeholder"
           style={[
-            ...style,
             styles.container__placeholder__bar,
+            style,
             {
               transform: [
                 {
@@ -54,4 +84,4 @@ const Placeholder = ({ animated, style }: any) => {
   );
 };
 
-export default Placeholder;
+export default memo(Placeholder);

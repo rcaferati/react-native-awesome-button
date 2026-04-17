@@ -1,19 +1,44 @@
-# &lt;AwesomeButton /&gt; Demo Application
+# React Native Awesome Button Demo
 
-<img alt='iPhoneX Demo App' width="250" src='https://github.com/rcaferati/react-native-really-awesome-button/blob/master/demo/iphoneX.png?raw=true' />
+`demo/` is the Expo SDK 52 compatibility harness for `react-native-really-awesome-button`.
 
-### Install react-community/create-react-native-app
+The app resolves the package name to the local library source during development, so changes in `../src` are reflected in the demo without publishing first.
 
-For simplicity sake I've built the demo app with Expo. So in order to run the app first you need to globally install `expo-cli`. For more details: [create-react-native-app](https://github.com/react-community/create-react-native-app)
+## What It Covers
 
+- registered theme navigation
+- basic buttons
+- progress buttons
+- before / after / icon content
+- transparent buttons
+- social variants
+- extra-content button compositions
+
+The demo is configured for Expo SDK 52, React Native `0.76`, Hermes, and `newArchEnabled: true`.
+
+## Install
+
+From the repo root:
+
+```bash
+yarn --cwd demo install
 ```
-npm install -g expo-cli
+
+## Run
+
+From the repo root:
+
+```bash
+yarn demo
+yarn demo:ios
+yarn demo:android
+yarn demo:web
 ```
 
-### Run the Demo App
+Or run Expo directly inside `demo/`:
 
-Run the app and attempts to open the app in the iOS Simulator if you're on a Mac and have it installed.
+```bash
+npx expo start
+```
 
-```
-expo start
-```
+No global `expo-cli` install is required.

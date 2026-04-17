@@ -1,225 +1,290 @@
-# React Native &lt;AwesomeButton /&gt;
+# React Native Awesome Button
 
-[![Travis](https://img.shields.io/travis/rcaferati/react-native-really-awesome-button/master.svg)](https://travis-ci.org/rcaferati/react-native-really-awesome-button) ![NPM](https://img.shields.io/npm/v/react-native-really-awesome-button.svg)
+`react-native-really-awesome-button` is the current npm package for this repo. The repository name is `react-native-awesome-button`, and the scoped rename is intentionally deferred to a later release.
 
-`react-native-really-awesome-button` is a performant, extendable, production ready React Native component that renders an animated set of 3D UI buttons.
+The library exports:
 
-| <img width="240" src='https://raw.githubusercontent.com/rcaferati/react-native-really-awesome-button/master/assets/demo-button-blue-new.gif?raw=true' />  | <img width="240" src='https://raw.githubusercontent.com/rcaferati/react-native-really-awesome-button/master/assets/demo-button-rick.gif?raw=true' />  | <img width="240" src='https://raw.githubusercontent.com/rcaferati/react-native-really-awesome-button/master/assets/demo-button-cartman.gif?raw=true' />  |
-|---|---|---|
+- `AwesomeButton` as the default export
+- `ThemedButton`
+- `getTheme`
+- explicit TypeScript types such as `AwesomeButtonProps`, `ThemedButtonProps`, `ButtonWidth`, `ThemeName`, `ButtonVariant`, and `ButtonSize`
 
-## Snack on Expo
+## Install
 
-Access the snack at [expo.dev](https://snack.expo.dev/@rcaferati/react-native-awesome-button).
-
-[<img src="https://caferati.me/images/github/expo-snack.png" width="800" />](https://snack.expo.dev/@rcaferati/react-native-awesome-button)
-
-
-## Figma File
-
-Import it directly into your [Figma](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue) project.
-
-[<img src="https://caferati.me/images/github/figma-awesome-button.png" width="800" />](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue)
-
-### Installation
-
-```
-npm install --save react-native-really-awesome-button
+```bash
+npm install react-native-really-awesome-button
 ```
 
-## Usage
+Current peer support:
 
-### Basic
+- `react >= 18.2.0`
+- `react-native >= 0.76.0`
 
-```jsx
-import AwesomeButton from "react-native-really-awesome-button";
+## Basic Usage
 
-function Button() {
-  return <AwesomeButton>Text</AwesomeButton>;
+```tsx
+import AwesomeButton from 'react-native-really-awesome-button';
+
+export function SaveButton() {
+  return <AwesomeButton>Save</AwesomeButton>;
 }
 ```
 
-### Progress
+`AwesomeButton` supports both plain string labels and arbitrary React Native content.
 
-```jsx
-import AwesomeButton from "react-native-really-awesome-button";
+## Progress Buttons
 
-function Button() {
+When `progress` is enabled, `onPress` receives a `next` callback. Call it when your work is done to complete the progress animation and release the button.
+
+```tsx
+import AwesomeButton from 'react-native-really-awesome-button';
+
+export function SubmitButton() {
   return (
     <AwesomeButton
       progress
-      onPress={async (next) => {
-        /** await for something; then: **/
-        next();
+      onPress={(next) => {
+        setTimeout(() => {
+          next?.();
+        }, 800);
       }}
     >
-      Text
+      Submit
     </AwesomeButton>
   );
 }
 ```
 
-### Importing a specific theme
+## Themed Buttons
 
-```jsx
-  import { ThemedButton } from 'react-native-really-awesome-button';
+```tsx
+import { ThemedButton } from 'react-native-really-awesome-button';
 
-  function ButtonWithTheme() {
-    return (
-      <>
-        <ThemedButton name="rick" type="primary">Rick's Primary Button</ThemedButton>
-        <ThemedButton name="rick" type="secondary">Rick's Secondary Button</ThemedButton>
-      </>
-    );
-  }
-```
-
-### Custom Children
-
-```jsx
-import AwesomeButton from "react-native-really-awesome-button";
-
-function ButtonWithCustomChildren() {
-  return (
-    <AwesomeButton>
-      <Image source="require('send-icon.png)" />
-      <Text>Send it</Text>
-    </AwesomeButton>
-  );
-}
-```
-
-### Adding content before and after the button label
-Useful for handling icons or any other inlined content which animates together with the button text.
-
-```jsx
-  import { ThemedButton } from 'react-native-really-awesome-button';
-  import { FontAwesome } from "@expo/icons";
-
-  function ButtonWithIcon() {
-    return (
-      <ThemedButton
-        name="bruce"
-        type="primary"
-        before={<FontAwesome name="twitter" />}>
-        Rick's Primary Button
-      </ThemedButton>
-    );
-  }
-```
-
-### Extra content placement
-You can use the `extra` prop to render a component inside the button content body; this should be useful to render an image or gradient background
-
-```jsx
-import { StyleSheet } from "react-native";
-import AwesomeButton from "react-native-really-awesome-button";
-import LinearGradient from "react-native-linear-gradient";
-
-function ButtonWithExtraContent() {
-  return (
-    <AwesomeButton
-      extra={
-        <LinearGradient
-          colors={["#4C63D2", "#BC3081", "#F47133", "#FED576"]}
-          style={{ ...StyleSheet.absoluteFillObject }}
-        />
-      }
-    >
-      <Text>Instagram</Text>
-    </AwesomeButton>
-  );
-}
-```
-
-### Full event control
-Added a set of controlling events on `v2`, giving control of every animation stage like `onPressedIn` and `onPressedOut` which are triggered on the `Animated` callback.
-
-```jsx
-import { StyleSheet } from "react-native";
-import AwesomeButton from "react-native-really-awesome-button";
-import LinearGradient from "react-native-linear-gradient";
-
-function ButtonWithExtraEvents() {
+export function ThemeExample() {
   return (
     <>
-      <AwesomeButton
-        onPressIn={handlePressIn}
-        onPressedIn={handlePressedIn}
-        onPressOut={handlePressOut}
-        onPressedOut={handlePressedOut}
-      >
-        Label
-      </AwesomeButton>
-      <AwesomeButton
-        progress
-        onProgressStart={handleOnProgressStart}
-        onProgressEnd={handleOnProgressEnd}
-        onPress={handleOnPress}
-      >
-        Label
-      </AwesomeButton>
+      <ThemedButton name="rick" type="primary">
+        Rick Primary
+      </ThemedButton>
+      <ThemedButton name="rick" type="secondary">
+        Rick Secondary
+      </ThemedButton>
     </>
   );
 }
 ```
 
-## Props
+If you need the full registered theme object, use `getTheme`.
 
-| Attributes            |     Type      |  Default  | Description                                               |
-| :-------------------- | :-----------: | :-------: | :-------------------------------------------------------- |
-| activityColor         | `String`      | `#FFFFFF` | Button activity indicator color                           |
-| activeOpacity         | `Number`      | `1`       | Button active state opacity                               |
-| animatedPlaceholder   | `Boolean`     | `true`    | When set to `false` removes the placeholder animation loop |
-| backgroundActive      | `String`      | `#C0C0C0` | Button active state background-color                      |
-| backgroundColor       | `String`      | `#C0C0C0` | Button content background-color                           |
-| backgroundDarker      | `String`      | `#9F9F9F` | Button bottom-front-face background-color                 |
-| backgroundShadow      | `String`      | `#C0C0C0` | Button bottom shadow background-color                     |
-| backgroundPlaceholder | `String`      | `#C0C0C0` | Button placeholder background-color                       |
-| backgroundProgress    | `String`      | `#C0C0C0` | Button progress bar background-color                      |
-| borderColor           | `String`      | `null`    | Button border-color                                        |
-| borderRadius          | `Number`      | `4`       | Button border-radius                                      |
-| borderWidth           | `Number`      | `0`       | Button border-width                                       |
-| dangerouslySetPressableProps | `PressableProps`    | `null`    | Exposes the `PressableProps` of the `Pressable` wrapper; it can overwrite all props except `onPressIn` and `onPressOut` |
-| debouncedPressTime    | `Number`      | `0`       | Configure onPress function debounce time                  |
-| disabled              | `Boolean`     | `true`    | Button disabled state: cancels animation and onPress func |
-| height                | `Number`      | `50`      | Button height                                             |
-| width                 | `Number`      | `null`    | Setting width to `null` mirrors an `auto` behaviour       |
-| paddingHorizontal     | `Number`      | `12`      | Sets the button horizontal padding                        |
-| paddingTop            | `Number`      | `0`       | Sets the button padding top                               |
-| paddingBottom         | `Number`      | `0`       | Sets the button padding bottom                            |
-| stretch               | `Boolean`     | `false`   | When set to `true` together with width set to `null` the button fills it's parent component width |
-| raiseLevel            | `Number`      | `4`       | Button 3D raise level                                     |
-| before                | `ReactNode`   | `null`    | Renders a custom component before the button content Text |
-| after                 | `ReactNode`   | `null`    | Renders a custom component after the button content Text  |
-| extra                 | `ReactNode`   | `null`    | Renders a custom component inside the button content body |
-| springRelease         | `Boolean`     | `true`    | Button uses elastic spring on the release animation       |
-| progress              | `Boolean`     | `false`   | When set to `true` enables progress animation             |
-| progressLoadingTime   | `Number`      | `3000`    | Number in `ms` for the maximum progress bar animation time |
-| textColor             | `String`      | `#FFFFFF` | Button default label text color                           |
-| textLineHeight        | `Number`      | `20`      | Button default label text line height                     |
-| textSize              | `Number`      | `16`      | Button default label text font size                       |
-| textFontFamily        | `String`      | `null`    | Button default label text font family                     |
-| style                 | `Style`       | `null`    | Button container custom styles                            |
-| onPress               | `Function`    | `null`    | Button onPress function. It receives a `next` argument when the `progress` prop is set to `true` |
-| onPressIn             | `Function`    | `null`    | Triggered with the `onPressIn` native event |
-| onPressedIn           | `Function`    | `null`    | Triggered once the press animation has finished |
-| onPressOut            | `Function`    | `null`    | Triggered with the `onPressOut` native event |
-| onPressedOut          | `Function`    | `null`    | Triggered once the release animation has finished |
-| onProgressStart       | `Function`    | `null`    | Triggered before the progress animation has started |
-| onProgressEnd         | `Function`    | `null`    | Triggered after the progress animation has finished |
+```tsx
+import { ThemedButton, getTheme } from 'react-native-really-awesome-button';
 
-## Web version
-Checkout the web version of the `Awesome Button UI Component` at [rcaferati/react-awesome-button](https://github.com/rcaferati/react-awesome-button)
+export function ThemeConfigExample() {
+  const theme = getTheme(0);
 
-[<img src="https://caferati.me/images/github/awesome-button-web.png" width="800" />](https://awesome-button.caferati.me)
+  return (
+    <ThemedButton config={theme} type="anchor">
+      {theme.title}
+    </ThemedButton>
+  );
+}
+```
 
-## About the Author
+`getTheme()` safely falls back to the default `basic` theme if the provided index or name is invalid.
 
-#### Rafael Caferati
+## Before / After / Extra Content
 
-- Checkout my <a href="https://caferati.me" title="Full-Stack Web Developer, UI/UX Javascript Specialist" target="_blank">Portfolio Website</a>
-- Connect with me on `LinkedIn` <a href="https://linkedin.com/in/rcaferati" title="Full-Stack Web Developer, UI/UX Javascript Specialist" target="_blank">@rcaferati</a>
+Use `before` and `after` for inline content that should animate with the label, and `extra` for content rendered behind the button body.
+
+```tsx
+import { StyleSheet, Text } from 'react-native';
+import { AntDesign } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import AwesomeButton from 'react-native-really-awesome-button';
+
+export function ButtonContentExample() {
+  return (
+    <AwesomeButton
+      before={<AntDesign name="arrowleft" size={18} color="#FFFFFF" />}
+      after={<AntDesign name="arrowright" size={18} color="#FFFFFF" />}
+      extra={
+        <LinearGradient
+          colors={['#4C63D2', '#BC3081', '#F47133', '#FED576']}
+          style={StyleSheet.absoluteFillObject}
+        />
+      }
+    >
+      <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Continue</Text>
+    </AwesomeButton>
+  );
+}
+```
+
+## Transparent Buttons
+
+`transparent` is supported on `ThemedButton`. It removes the visible shell layers while preserving the content, hit target, and active/progress feedback.
+
+```tsx
+import { ThemedButton } from 'react-native-really-awesome-button';
+
+export function TransparentExample() {
+  return (
+    <ThemedButton name="bruce" type="anchor" transparent>
+      Transparent
+    </ThemedButton>
+  );
+}
+```
+
+## Built-in Theme Contract
+
+### Theme Names
+
+- `basic`
+- `bojack`
+- `cartman`
+- `mysterion`
+- `c137`
+- `rick`
+- `summer`
+- `bruce`
+
+### Variants
+
+- `primary`
+- `secondary`
+- `anchor`
+- `danger`
+- `disabled`
+- `flat`
+- `twitter`
+- `messenger`
+- `facebook`
+- `github`
+- `linkedin`
+- `whatsapp`
+- `reddit`
+- `pinterest`
+- `youtube`
+
+Unknown variants fall back safely at runtime instead of crashing, but only the variants above are part of the typed built-in API.
+
+### Sizes
+
+- `icon`
+- `small`
+- `medium`
+- `large`
+
+## Selected Props
+
+The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonProps`.
+
+### AwesomeButton Props
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| `activityColor` | `string` | `#FFFFFF` | Activity indicator color shown during progress mode. |
+| `activeOpacity` | `number` | `1` | Opacity applied while the button is pressed. |
+| `animatedPlaceholder` | `boolean` | `true` | Enables the shimmer loop when the button has no `children`. |
+| `backgroundActive` | `string` | `rgba(0, 0, 0, 0.15)` | Active overlay color rendered over the face while pressed. |
+| `backgroundColor` | `string` | `#c0c0c0` | Main front-face background color. |
+| `backgroundDarker` | `string` | `#9f9f9f` | Bottom-face background color used for the raised 3D effect. |
+| `backgroundPlaceholder` | `string` | `rgba(0, 0, 0, 0.15)` | Placeholder bar background color when the button is empty. |
+| `backgroundProgress` | `string` | `rgba(0, 0, 0, 0.15)` | Progress bar background color used during `progress` mode. |
+| `backgroundShadow` | `string` | `rgba(0, 0, 0, 0.15)` | Shadow layer background color. |
+| `before` | `ReactNode` | `null` | Content rendered before the main label inside the button face. |
+| `after` | `ReactNode` | `null` | Content rendered after the main label inside the button face. |
+| `extra` | `ReactNode` | `null` | Content rendered behind the active/content layers, useful for gradients and custom backgrounds. |
+| `children` | `ReactNode` | `null` | Button label or custom content. Plain string labels also support `textTransition`. |
+| `borderColor` | `string` | `undefined` | Front-face border color. |
+| `borderRadius` | `number` | `4` | Shared border radius applied to the button face and lower layers. |
+| `borderBottomLeftRadius` | `number` | `undefined` | Bottom-left radius override. |
+| `borderBottomRightRadius` | `number` | `undefined` | Bottom-right radius override. |
+| `borderTopLeftRadius` | `number` | `undefined` | Top-left radius override. |
+| `borderTopRightRadius` | `number` | `undefined` | Top-right radius override. |
+| `borderWidth` | `number` | `0` | Front-face border width. |
+| `dangerouslySetPressableProps` | `AwesomeButtonPressableProps` | `{}` | Escape hatch for extra `Pressable` props. Core `onPress`, `onPressIn`, and `onPressOut` remain owned by the component. |
+| `debouncedPressTime` | `number` | `0` | Debounces `onPress` in milliseconds. |
+| `disabled` | `boolean` | `false` | Disables interactions and marks the internal `Pressable` as disabled. |
+| `height` | `number` | `60` | Base button height before padding and raise-level adjustments. |
+| `hitSlop` | `PressableProps['hitSlop']` | `undefined` | Optional press target expansion. |
+| `paddingHorizontal` | `number` | `16` | Horizontal content padding. |
+| `paddingTop` | `number` | `0` | Additional top padding for the content row. |
+| `paddingBottom` | `number` | `0` | Additional bottom padding for the content row. |
+| `progress` | `boolean` | `false` | Enables the progress-button flow. `onPress` receives a `next` callback in this mode. |
+| `progressLoadingTime` | `number` | `3000` | Duration of the loading bar animation in progress mode. |
+| `raiseLevel` | `number` | `4` | Vertical raise distance used to render the 3D depth effect. |
+| `springRelease` | `boolean` | `true` | Uses spring-based release animation instead of timing-based release. |
+| `stretch` | `boolean` | `false` | Makes the button fill the available horizontal space. |
+| `style` | `StyleProp<ViewStyle>` | `undefined` | Extra style applied to the outer animated container. |
+| `textColor` | `string` | `#FFFFFF` | Default label text color. |
+| `textFontFamily` | `string` | `undefined` | Optional font family for string labels. |
+| `textLineHeight` | `number` | `20` | Placeholder bar height and string label line-height baseline. |
+| `textSize` | `number` | `14` | Default font size for string labels. |
+| `textTransition` | `boolean` | `false` | Enables the built-in scramble/reveal animation when a plain string label changes after mount. |
+| `width` | `number \| 'auto' \| null` | `null` | Fixed width, measured auto width (`null` / `'auto'`), or pair with `stretch` for full width. |
+| `onPress` | `(next?) => void` | `() => undefined` | Main press callback. In `progress` mode it receives the completion handler. |
+| `onLongPress` | `PressableProps['onLongPress']` | `undefined` | Native long-press callback forwarded to `Pressable`. |
+| `onPressIn` | `(event) => void` | `() => undefined` | Native press-in observer callback. |
+| `onPressOut` | `(event) => void` | `() => undefined` | Native press-out observer callback. |
+| `onPressedIn` | `() => void` | `() => undefined` | Fires after the internal press-in animation completes. |
+| `onPressedOut` | `() => void` | `() => undefined` | Fires after the internal release animation completes. |
+| `onProgressStart` | `() => void` | `() => undefined` | Fires when progress mode transitions into loading. |
+| `onProgressEnd` | `() => void` | `() => undefined` | Fires when progress mode finishes and the button releases. |
+
+### ThemedButton Additional Props
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| `config` | `ThemeDefinition` | `undefined` | Explicit theme object. When provided, it takes precedence over `name` and `index`. |
+| `flat` | `boolean` | `false` | Requests the `flat` theme variant when available. |
+| `index` | `number \| null` | `null` | Theme index used by `getTheme(index)` when `config` and `name` are not provided. |
+| `name` | `ThemeName \| null` | `null` | Named built-in theme selector. Falls back safely to `basic` if invalid. |
+| `size` | `ButtonSize` | `medium` | Built-in theme size preset: `icon`, `small`, `medium`, or `large`. |
+| `transparent` | `boolean` | `false` | Makes the visible shell layers transparent while keeping content, press, and progress feedback active. |
+| `type` | `ButtonVariant` | `primary` | Built-in variant to resolve from the selected theme. |
+
+## Development
+
+Root quality gates:
+
+```bash
+yarn test
+yarn typescript
+yarn lint
+yarn prepare
+```
+
+Demo app commands:
+
+```bash
+yarn --cwd demo install
+yarn demo
+yarn demo:ios
+yarn demo:android
+yarn demo:web
+```
+
+The Expo demo resolves `react-native-really-awesome-button` to the local `src/` folder, so you can iterate on the library without publishing it first.
+
+## Demo
+
+The `demo/` app is an Expo SDK 52 compatibility harness for:
+
+- common themed buttons across all registered themes
+- progress buttons
+- variant transition examples
+- text transition examples
+- empty placeholder states
+- flat button variants
+- before / after / icon content
+- auto-width and stretch examples
+- social variants
+- extra-content button compositions
+
+See [`demo/README.md`](./demo/README.md) for demo-specific instructions.
 
 ## License
 
-MIT. Copyright (c) 2022 Rafael Caferati.
+MIT.

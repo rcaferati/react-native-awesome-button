@@ -1,9 +1,13 @@
-import type { ButtonTypes } from '../Button';
-// @ts-ignore
+import type {
+  ThemeButtonDefinitions,
+  ThemeButtonStyle,
+  ThemeDefinition,
+  ThemeSizeDefinitions,
+} from '../types';
 import colors from './colors';
 import SocialTypes from './social';
 
-const COMMON: ButtonTypes = {
+const COMMON: ThemeButtonStyle = {
   borderRadius: 8,
   height: 60,
   raiseLevel: 12,
@@ -14,7 +18,7 @@ const primary = '#4688C5';
 const anchor = '#46C578';
 const danger = '#B13A3A';
 
-const BUTTONS: any = {
+const BUTTONS: ThemeButtonDefinitions = {
   primary: {
     ...COMMON,
     backgroundColor: primary,
@@ -68,7 +72,7 @@ const BUTTONS: any = {
   ...SOCIAL_TYPES,
 };
 
-const SIZE: any = {
+const SIZE: ThemeSizeDefinitions = {
   icon: {
     width: 60,
     height: 60,
@@ -91,10 +95,12 @@ const SIZE: any = {
   },
 };
 
-export default {
+const basic: ThemeDefinition = {
   title: 'Basic Theme',
   background: '#1775c8',
   color: '#FFF',
   buttons: BUTTONS,
   size: SIZE,
 };
+
+export default basic;

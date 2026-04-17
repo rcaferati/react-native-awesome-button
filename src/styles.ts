@@ -1,4 +1,5 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ViewStyle } from 'react-native';
+import type { ButtonWidth } from './types';
 
 type DynamicStyles = {
   backgroundActive?: string;
@@ -24,7 +25,7 @@ type DynamicStyles = {
   textColor?: string;
   textLineHeight?: number;
   textSize?: number;
-  width?: number | null;
+  width?: ButtonWidth;
   stateWidth?: number | null;
 };
 
@@ -56,16 +57,25 @@ export const getStyles = ({
   width,
 }: DynamicStyles) => {
   const calcHeight = height + paddingBottom + paddingTop;
-  const calcWidth = stretch ? '100%' : width || stateWidth || null;
-  const borderRadiusObject: any = {};
+  const calcWidth: ViewStyle['width'] = stretch
+    ? '100%'
+    : width ?? stateWidth ?? undefined;
+  const borderRadiusObject: Pick<
+    ViewStyle,
+    | 'borderRadius'
+    | 'borderBottomLeftRadius'
+    | 'borderBottomRightRadius'
+    | 'borderTopLeftRadius'
+    | 'borderTopRightRadius'
+  > = {
+    borderRadius,
+    borderBottomLeftRadius,
+    borderBottomRightRadius,
+    borderTopLeftRadius,
+    borderTopRightRadius,
+  };
 
-  borderRadiusObject.borderRadius = borderRadius;
-  borderRadiusObject.borderBottomLeftRadius = borderBottomLeftRadius;
-  borderRadiusObject.borderBottomRightRadius = borderBottomRightRadius;
-  borderRadiusObject.borderTopLeftRadius = borderTopLeftRadius;
-  borderRadiusObject.borderTopRightRadius = borderTopRightRadius;
-
-  const dimensionsDiff = {
+  const dimensionsDiff: Pick<ViewStyle, 'width' | 'height'> = {
     width: calcWidth,
     height: calcHeight - raiseLevel,
   };

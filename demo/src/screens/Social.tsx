@@ -1,13 +1,23 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { ThemedButton } from 'react-native-really-awesome-button';
+import {
+  ThemedButton,
+  type ProgressCompletionHandler,
+} from 'react-native-really-awesome-button';
 import Container from '../components/Container';
 import Section from '../components/Section';
 import { AntDesign, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { ProgressDemoHandler, SocialScreenProps } from '../types';
 
-export default function Social({ navigation }: any) {
-  const handleTimeout = (next: any) => setTimeout(next, 1000);
+export default function Social({ navigation }: SocialScreenProps) {
+  const handleTimeout: ProgressDemoHandler = (
+    next?: ProgressCompletionHandler
+  ) => {
+    setTimeout(() => {
+      next?.();
+    }, 1000);
+  };
   const theme = 'bojack';
 
   useEffect(() => {
@@ -18,7 +28,7 @@ export default function Social({ navigation }: any) {
       },
       headerTintColor: '#FFF',
     });
-  }, []);
+  }, [navigation]);
 
   return (
     <Container>
@@ -83,11 +93,12 @@ export default function Social({ navigation }: any) {
           extra={
             <LinearGradient
               colors={['#4C63D2', '#BC3081', '#F47133', '#FED576']}
-              style={{ ...StyleSheet.absoluteFillObject }}
+              style={StyleSheet.absoluteFillObject}
             />
           }
           style={styles.button}
-          width={180}>
+          width={180}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: -2, marginRight: 7 }]}
             name="instagram"
@@ -122,7 +133,8 @@ export default function Social({ navigation }: any) {
           type="youtube"
           width={60}
           borderRadius={0}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
             name="youtube"

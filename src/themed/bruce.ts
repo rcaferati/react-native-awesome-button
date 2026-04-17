@@ -1,5 +1,9 @@
-import type { ButtonTypes } from '../Button';
-// @ts-ignore
+import type {
+  ThemeButtonDefinitions,
+  ThemeButtonStyle,
+  ThemeDefinition,
+  ThemeSizeDefinitions,
+} from '../types';
 import colors from './colors';
 import SocialTypes from './social';
 
@@ -9,7 +13,7 @@ const purple = '#733086';
 const green = '#77CD38';
 const yellow = '#FFE727';
 
-const COMMON: ButtonTypes = {
+const COMMON: ThemeButtonStyle = {
   borderRadius: 8,
   height: 62,
   raiseLevel: 10,
@@ -18,7 +22,7 @@ const COMMON: ButtonTypes = {
 
 const SOCIAL_TYPES = SocialTypes(COMMON);
 
-const BUTTONS = {
+const BUTTONS: ThemeButtonDefinitions = {
   primary: {
     ...COMMON,
     backgroundColor: dark,
@@ -75,7 +79,7 @@ const BUTTONS = {
   ...SOCIAL_TYPES,
 };
 
-const SIZE = {
+const SIZE: ThemeSizeDefinitions = {
   icon: {
     width: 60,
     height: 60,
@@ -98,10 +102,12 @@ const SIZE = {
   },
 };
 
-export default {
+const bruce: ThemeDefinition = {
   title: 'Bruce Theme',
   background: '#2f2f2f',
   color: '#FFF',
   buttons: BUTTONS,
   size: SIZE,
 };
+
+export default bruce;

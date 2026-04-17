@@ -12,7 +12,7 @@ module.exports = function (api) {
         {
           extensions: ['.tsx', '.ts', '.js', '.json'],
           alias: {
-            // For development, we want to alias the library to the source
+            // Resolve the local package source so demo changes reflect library edits.
             [pak.name]: path.join(__dirname, '..', pak.source),
           },
         },
