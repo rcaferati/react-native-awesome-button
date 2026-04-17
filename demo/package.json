@@ -1,6 +1,6 @@
 {
   "name": "react-native-awesome-button-demo",
-  "description": "Expo 52 demo app for react-native-really-awesome-button",
+  "description": "Expo 52 demo app for @rcaferati/react-native-awesome-button",
   "version": "0.0.1",
   "private": true,
   "main": "index.js",

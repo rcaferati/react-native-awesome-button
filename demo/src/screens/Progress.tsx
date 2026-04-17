@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import {
   ThemedButton,
   type ProgressCompletionHandler,
-} from 'react-native-really-awesome-button';
+} from '@rcaferati/react-native-awesome-button';
 import Container from '../components/Container';
 import Section from '../components/Section';
 import { MaterialCommunityIcons } from '@expo/vector-icons';

@@ -7,7 +7,7 @@ import {
   NativeStackNavigationOptions,
 } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ThemedButton, getTheme } from 'react-native-really-awesome-button';
+import { ThemedButton, getTheme } from '@rcaferati/react-native-awesome-button';
 import ThemeScreen from '../screens/ThemeScreen';
 import Social from '../screens/Social';
 import Progress from '../screens/Progress';

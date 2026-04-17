@@ -2,7 +2,7 @@
   "expo": {
     "name": "React Native Awesome Button Demo",
     "slug": "react-native-awesome-button-demo",
-    "description": "Expo demo app for react-native-really-awesome-button",
+    "description": "Expo demo app for @rcaferati/react-native-awesome-button",
     "privacy": "public",
     "version": "1.0.0",
     "orientation": "portrait",

@@ -5,7 +5,7 @@ import {
   getTheme,
   type ButtonVariant,
   type ProgressCompletionHandler,
-} from 'react-native-really-awesome-button';
+} from '@rcaferati/react-native-awesome-button';
 import { AntDesign } from '@expo/vector-icons';
 import Container from './Container';
 import Section from './Section';

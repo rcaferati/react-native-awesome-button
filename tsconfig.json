@@ -2,7 +2,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "react-native-really-awesome-button": ["./src/index"]
+      "@rcaferati/react-native-awesome-button": ["./src/index"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,

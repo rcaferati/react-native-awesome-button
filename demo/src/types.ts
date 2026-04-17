@@ -8,7 +8,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type {
   ProgressCompletionHandler,
   ThemeName,
-} from 'react-native-really-awesome-button';
+} from '@rcaferati/react-native-awesome-button';
 
 export type DemoThemeStackParamList = {
   ThemeScreen: { index?: number } | undefined;
@@ -16,8 +16,8 @@ export type DemoThemeStackParamList = {
 
 export type DemoTabParamList = {
   'Themed Buttons': undefined;
-  Progress: undefined;
-  Social: undefined;
+  'Progress': undefined;
+  'Social': undefined;
 };
 
 export type ThemeScreenProps = NativeStackScreenProps<
@@ -68,6 +68,4 @@ export type ThemeCharacterConfig = {
   y: number;
 };
 
-export type ProgressDemoHandler = (
-  next?: ProgressCompletionHandler
-) => void;
+export type ProgressDemoHandler = (next?: ProgressCompletionHandler) => void;

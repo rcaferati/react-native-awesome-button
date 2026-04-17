@@ -3,10 +3,14 @@ import { StyleSheet, Text } from 'react-native';
 import {
   ThemedButton,
   type ProgressCompletionHandler,
-} from 'react-native-really-awesome-button';
+} from '@rcaferati/react-native-awesome-button';
 import Container from '../components/Container';
 import Section from '../components/Section';
-import { AntDesign, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  AntDesign,
+  FontAwesome,
+  MaterialCommunityIcons,
+} from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ProgressDemoHandler, SocialScreenProps } from '../types';
 
@@ -41,7 +45,8 @@ export default function Social({ navigation }: SocialScreenProps) {
           type="facebook"
           width={180}
           borderRadius={50}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: -1 }]}
             name="facebook-square"
@@ -58,7 +63,8 @@ export default function Social({ navigation }: SocialScreenProps) {
           type="twitter"
           width={180}
           borderRadius={8}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <AntDesign
             style={[styles.iconLeft, { marginTop: 1, marginRight: 5 }]}
             name="twitter"
@@ -75,7 +81,8 @@ export default function Social({ navigation }: SocialScreenProps) {
           type="messenger"
           width={180}
           borderRadius={0}
-          raiseLevel={6}>
+          raiseLevel={6}
+        >
           <MaterialCommunityIcons
             style={[styles.iconLeft, { marginTop: 0, marginRight: 4 }]}
             name="facebook-messenger"
@@ -117,7 +124,8 @@ export default function Social({ navigation }: SocialScreenProps) {
           type="whatsapp"
           width={60}
           borderRadius={0}
-          raiseLevel={0}>
+          raiseLevel={0}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
             name="whatsapp"
@@ -150,7 +158,8 @@ export default function Social({ navigation }: SocialScreenProps) {
           type="linkedin"
           width={60}
           borderRadius={8}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
             name="linkedin"
@@ -167,7 +176,8 @@ export default function Social({ navigation }: SocialScreenProps) {
           width={60}
           height={60}
           borderRadius={80}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
             name="pinterest"

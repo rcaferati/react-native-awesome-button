@@ -1,6 +1,6 @@
 # React Native Awesome Button
 
-`react-native-really-awesome-button` is the current npm package for this repo. The repository name is `react-native-awesome-button`, and the scoped rename is intentionally deferred to a later release.
+`@rcaferati/react-native-awesome-button` is the current npm package for this repo.
 
 The library exports:
 
@@ -12,7 +12,7 @@ The library exports:
 ## Install
 
 ```bash
-npm install react-native-really-awesome-button
+npm install @rcaferati/react-native-awesome-button
 ```
 
 Current peer support:
@@ -23,7 +23,7 @@ Current peer support:
 ## Basic Usage
 
 ```tsx
-import AwesomeButton from 'react-native-really-awesome-button';
+import AwesomeButton from '@rcaferati/react-native-awesome-button';
 
 export function SaveButton() {
   return <AwesomeButton>Save</AwesomeButton>;
@@ -37,7 +37,7 @@ export function SaveButton() {
 When `progress` is enabled, `onPress` receives a `next` callback. Call it when your work is done to complete the progress animation and release the button.
 
 ```tsx
-import AwesomeButton from 'react-native-really-awesome-button';
+import AwesomeButton from '@rcaferati/react-native-awesome-button';
 
 export function SubmitButton() {
   return (
@@ -58,7 +58,7 @@ export function SubmitButton() {
 ## Themed Buttons
 
 ```tsx
-import { ThemedButton } from 'react-native-really-awesome-button';
+import { ThemedButton } from '@rcaferati/react-native-awesome-button';
 
 export function ThemeExample() {
   return (
@@ -77,7 +77,7 @@ export function ThemeExample() {
 If you need the full registered theme object, use `getTheme`.
 
 ```tsx
-import { ThemedButton, getTheme } from 'react-native-really-awesome-button';
+import { ThemedButton, getTheme } from '@rcaferati/react-native-awesome-button';
 
 export function ThemeConfigExample() {
   const theme = getTheme(0);
@@ -100,7 +100,7 @@ Use `before` and `after` for inline content that should animate with the label, 
 import { StyleSheet, Text } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import AwesomeButton from 'react-native-really-awesome-button';
+import AwesomeButton from '@rcaferati/react-native-awesome-button';
 
 export function ButtonContentExample() {
   return (
@@ -125,7 +125,7 @@ export function ButtonContentExample() {
 `transparent` is supported on `ThemedButton`. It removes the visible shell layers while preserving the content, hit target, and active/progress feedback.
 
 ```tsx
-import { ThemedButton } from 'react-native-really-awesome-button';
+import { ThemedButton } from '@rcaferati/react-native-awesome-button';
 
 export function TransparentExample() {
   return (
@@ -266,7 +266,7 @@ yarn demo:android
 yarn demo:web
 ```
 
-The Expo demo resolves `react-native-really-awesome-button` to the local `src/` folder, so you can iterate on the library without publishing it first.
+The Expo demo resolves `@rcaferati/react-native-awesome-button` to the local `src/` folder, so you can iterate on the library without publishing it first.
 
 ## Demo
 

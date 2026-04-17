@@ -9,7 +9,7 @@ import AwesomeButton, {
   type ThemeDefinition,
   type ThemeName,
   type ThemedButtonProps,
-} from 'react-native-really-awesome-button';
+} from '@rcaferati/react-native-awesome-button';
 
 const themeName: ThemeName = 'basic';
 const buttonVariant: ButtonVariant = 'github';

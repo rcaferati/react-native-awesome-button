@@ -1,5 +1,5 @@
 {
-  "name": "react-native-really-awesome-button",
+  "name": "@rcaferati/react-native-awesome-button",
   "version": "3.0.0",
   "description": "React Native button component that renders a 60fps animated set of progress-enabled 3D buttons.",
   "main": "lib/commonjs/index",
@@ -40,7 +40,7 @@
     "type": "git",
     "url": "git+https://github.com/rcaferati/react-native-awesome-button.git"
   },
-  "author": "rcaferati <rafael@caferati.me> (https://github.com/rcaferati)",
+  "author": "rcaferati <rafael@caferati.dev> (https://github.com/rcaferati)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/rcaferati/react-native-awesome-button/issues"
@@ -118,7 +118,9 @@
     "parserOptions": {
       "requireConfigFile": false,
       "babelOptions": {
-        "presets": ["module:@react-native/babel-preset"]
+        "presets": [
+          "module:@react-native/babel-preset"
+        ]
       }
     },
     "extends": [
