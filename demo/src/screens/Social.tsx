@@ -1,13 +1,27 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { ThemedButton } from 'react-native-really-awesome-button';
+import {
+  ThemedButton,
+  type ProgressCompletionHandler,
+} from '@rcaferati/react-native-awesome-button';
 import Container from '../components/Container';
 import Section from '../components/Section';
-import { AntDesign, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  AntDesign,
+  FontAwesome,
+  MaterialCommunityIcons,
+} from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { ProgressDemoHandler, SocialScreenProps } from '../types';
 
-export default function Social({ navigation }: any) {
-  const handleTimeout = (next: any) => setTimeout(next, 1000);
+export default function Social({ navigation }: SocialScreenProps) {
+  const handleTimeout: ProgressDemoHandler = (
+    next?: ProgressCompletionHandler
+  ) => {
+    setTimeout(() => {
+      next?.();
+    }, 1000);
+  };
   const theme = 'bojack';
 
   useEffect(() => {
@@ -18,7 +32,7 @@ export default function Social({ navigation }: any) {
       },
       headerTintColor: '#FFF',
     });
-  }, []);
+  }, [navigation]);
 
   return (
     <Container>
@@ -31,7 +45,8 @@ export default function Social({ navigation }: any) {
           type="facebook"
           width={180}
           borderRadius={50}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: -1 }]}
             name="facebook-square"
@@ -48,7 +63,8 @@ export default function Social({ navigation }: any) {
           type="twitter"
           width={180}
           borderRadius={8}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <AntDesign
             style={[styles.iconLeft, { marginTop: 1, marginRight: 5 }]}
             name="twitter"
@@ -65,7 +81,8 @@ export default function Social({ navigation }: any) {
           type="messenger"
           width={180}
           borderRadius={0}
-          raiseLevel={6}>
+          raiseLevel={6}
+        >
           <MaterialCommunityIcons
             style={[styles.iconLeft, { marginTop: 0, marginRight: 4 }]}
             name="facebook-messenger"
@@ -83,11 +100,12 @@ export default function Social({ navigation }: any) {
           extra={
             <LinearGradient
               colors={['#4C63D2', '#BC3081', '#F47133', '#FED576']}
-              style={{ ...StyleSheet.absoluteFillObject }}
+              style={StyleSheet.absoluteFillObject}
             />
           }
           style={styles.button}
-          width={180}>
+          width={180}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: -2, marginRight: 7 }]}
             name="instagram"
@@ -106,7 +124,8 @@ export default function Social({ navigation }: any) {
           type="whatsapp"
           width={60}
           borderRadius={0}
-          raiseLevel={0}>
+          raiseLevel={0}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
             name="whatsapp"
@@ -122,7 +141,8 @@ export default function Social({ navigation }: any) {
           type="youtube"
           width={60}
           borderRadius={0}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
             name="youtube"
@@ -138,7 +158,8 @@ export default function Social({ navigation }: any) {
           type="linkedin"
           width={60}
           borderRadius={8}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
             name="linkedin"
@@ -155,7 +176,8 @@ export default function Social({ navigation }: any) {
           width={60}
           height={60}
           borderRadius={80}
-          raiseLevel={8}>
+          raiseLevel={8}
+        >
           <FontAwesome
             style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
             name="pinterest"

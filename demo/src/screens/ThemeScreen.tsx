@@ -1,11 +1,10 @@
 import * as React from 'react';
 import Example from '../components/Example';
+import type { ThemeScreenProps } from '../types';
 
-function ThemeScreen({ route }: any) {
-  const index: number = route?.params?.index || 0
-  return (
-    <Example index={index} />
-  );
+function ThemeScreen({ route }: ThemeScreenProps) {
+  const index = route.params?.index ?? 0;
+  return <Example index={index} />;
 }
 
 export default ThemeScreen;

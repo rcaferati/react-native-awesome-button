@@ -1,10 +1,8 @@
 import * as React from 'react';
-import RootStack from "./stack/RootStack";
+import RootStack from './stack/RootStack';
 
 function App() {
-  return (
-    <RootStack />
-  );
+  return <RootStack />;
 }
 
 export default App;

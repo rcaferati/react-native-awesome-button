@@ -1,25 +1,35 @@
 {
-  "name": "react-native-really-awesome-button-demo",
-  "displayName": "ReallyAwesomeButton",
   "expo": {
-    "name": "react-native-really-awesome-button",
-    "slug": "react-native-really-awesome-button",
-    "description": "Example app for react-native-really-awesome-button",
+    "name": "React Native Awesome Button Demo",
+    "slug": "react-native-awesome-button-demo",
+    "description": "Expo demo app for @rcaferati/react-native-awesome-button",
     "privacy": "public",
     "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "platforms": ["ios", "android", "web"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rcaferati.reactnativereallyawesomebutton"
+      "bundleIdentifier": "com.rcaferati.reactnativeawesomebuttondemo"
     },
     "jsEngine": "hermes",
     "assetBundlePatterns": ["**/*"],
-    "runtimeVersion": {
-      "policy": "sdkVersion"
+    "splash": {
+      "image": "./src/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
     },
-    "android": {},
-    "updates": {
-      "url": "https://u.expo.dev/f155b7a0-2b1e-11e8-983b-eb3551ff83d2"
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./src/assets/favicon.png"
     }
   }
 }

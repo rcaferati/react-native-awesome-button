@@ -1,26 +1,18 @@
-import React, {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  ReactNode,
-} from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
-  View,
   Animated,
-  Text,
-  LayoutChangeEvent,
-  GestureResponderEvent,
+  Pressable,
   PressableProps,
+  Text,
+  View,
 } from 'react-native';
-import { animateTiming, animateElastic, animateSpring } from './helpers';
-import debounce from 'lodash.debounce';
-import { styles, getStyles } from './styles';
+import { getStyles, styles } from './styles';
+import useAutoWidth from './useAutoWidth';
+import useButtonTextTransition from './useButtonTextTransition';
+import usePressProgressController from './usePressProgressController';
 import {
   ANIMATED_TIMING_LOADING,
-  ANIMATED_TIMING_OFF,
   DEFAULT_ACTIVITY_COLOR,
   DEFAULT_ACTIVE_OPACITY,
   DEFAULT_BACKGROUND_ACTIVE,
@@ -39,56 +31,36 @@ import {
   DEFAULT_WIDTH,
 } from './constants';
 import Placeholder from './Placeholder';
+import type { AwesomeButtonProps } from './types';
 
-export type ButtonTypes = {
-  activityColor?: string;
-  activeOpacity?: number;
-  animatedPlaceholder?: boolean;
-  backgroundActive?: string;
-  backgroundColor?: string;
-  backgroundDarker?: string;
-  backgroundPlaceholder?: string;
-  backgroundProgress?: string;
-  backgroundShadow?: string;
-  borderColor?: string;
-  borderRadius?: number;
-  borderBottomLeftRadius?: number;
-  borderBottomRightRadius?: number;
-  borderTopLeftRadius?: number;
-  borderTopRightRadius?: number;
-  debouncedPressTime?: number;
-  borderLeftBottomRadius?: number;
-  borderWidth?: number;
-  progressLoadingTime?: number;
-  extra?: any;
-  disabled?: boolean;
-  height?: number;
-  hitSlop?: PressableProps['hitSlop'];
-  paddingHorizontal?: number;
-  paddingTop?: number;
-  progress?: boolean;
-  before?: ReactNode;
-  dangerouslySetPressableProps?: PressableProps;
-  after?: ReactNode;
-  paddingBottom?: number;
-  raiseLevel?: number;
-  springRelease?: boolean;
-  stretch?: boolean;
-  style?: any;
-  textFontFamily?: string;
-  textColor?: string;
-  textLineHeight?: number;
-  textSize?: number;
-  width?: number | null;
-  children?: string | ReactNode;
-  onPress?: (callback?: () => void) => void;
-  onLongPress?: PressableProps['onLongPress'];
-  onPressIn?: (event: GestureResponderEvent) => void;
-  onPressOut?: (event: GestureResponderEvent) => void;
-  onPressedIn?: () => void;
-  onPressedOut?: () => void;
-  onProgressStart?: () => void;
-  onProgressEnd?: () => void;
+/**
+ * @deprecated Use AwesomeButtonProps instead.
+ */
+export type ButtonTypes = AwesomeButtonProps;
+
+const getMergedAccessibilityState = (
+  accessibilityState: PressableProps['accessibilityState'],
+  {
+    busy,
+    disabled,
+  }: {
+    busy: boolean;
+    disabled: boolean;
+  }
+) => {
+  const nextState = {
+    ...accessibilityState,
+  };
+
+  if (disabled || nextState.disabled !== undefined) {
+    nextState.disabled = Boolean(disabled || nextState.disabled);
+  }
+
+  if (busy || nextState.busy !== undefined) {
+    nextState.busy = Boolean(busy || nextState.busy);
+  }
+
+  return Object.keys(nextState).length > 0 ? nextState : undefined;
 };
 
 const AwesomeButton = ({
@@ -113,17 +85,17 @@ const AwesomeButton = ({
   after = null,
   disabled = false,
   height = DEFAULT_HEIGHT,
-  hitSlop = null,
+  hitSlop,
   debouncedPressTime = DEFAULT_DEBOUNCED_PRESS_TIME,
   paddingHorizontal = DEFAULT_HORIZONTAL_PADDING,
-  onPress = () => null,
-  onPressIn = () => null,
-  onPressedIn = () => null,
-  onPressOut = () => null,
-  onPressedOut = () => null,
-  onProgressStart = () => null,
-  onProgressEnd = () => null,
-  onLongPress = null,
+  onPress = () => undefined,
+  onPressIn = () => undefined,
+  onPressedIn = () => undefined,
+  onPressOut = () => undefined,
+  onPressedOut = () => undefined,
+  onProgressStart = () => undefined,
+  onProgressEnd = () => undefined,
+  onLongPress,
   dangerouslySetPressableProps = {},
   progress = false,
   paddingBottom = 0,
@@ -132,14 +104,16 @@ const AwesomeButton = ({
   raiseLevel = DEFAULT_RAISE_LEVEL,
   springRelease = true,
   stretch = false,
-  style = null,
+  style,
   textColor = DEFAULT_TEXT_COLOR,
   textLineHeight = DEFAULT_LINE_HEIGHT,
   textSize = DEFAULT_TEXT_SIZE,
+  textTransition = false,
   textFontFamily,
-  width = DEFAULT_WIDTH,
+  width: rawWidth = DEFAULT_WIDTH,
   extra = null,
-}: ButtonTypes) => {
+}: AwesomeButtonProps) => {
+  const width = rawWidth === 'auto' ? null : rawWidth;
   const loadingOpacity = useRef(new Animated.Value(1)).current;
   const textOpacity = useRef(new Animated.Value(1)).current;
   const activityOpacity = useRef(new Animated.Value(0)).current;
@@ -147,103 +121,130 @@ const AwesomeButton = ({
   const animatedValue = useRef(new Animated.Value(0)).current;
   const animatedLoading = useRef(new Animated.Value(0)).current;
   const animatedOpacity = useRef(
-    new Animated.Value(width === null && !stretch === true ? 0 : 1)
+    new Animated.Value(width === null && stretch !== true ? 0 : 1)
   ).current;
-  const pressing = useRef(false);
-  const pressed = useRef(false);
-  const actioned = useRef(false);
-  const progressing = useRef(false);
-  const timeout = useRef<number | null>(null);
-  const containerWidth = useRef<number | null>(null);
-  const pressAnimation = useRef<Animated.CompositeAnimation | null>(null);
-  const [activity, setActivity] = useState(false);
-  const [stateWidth, setStateWidth] = useState<number | null>(null);
-  const debouncedPress = debouncedPressTime
-    ? debounce(
-        (animateProgressEnd: (callback?: any) => void) =>
-          onPress(animateProgressEnd),
-        debouncedPressTime,
-        {
-          trailing: false,
-          leading: true,
-        }
-      )
-    : onPress;
-
-  const layout = {
-    backgroundActive,
-    backgroundColor,
-    backgroundDarker,
-    backgroundPlaceholder,
-    backgroundProgress,
-    backgroundShadow,
-    borderColor,
-    borderRadius,
-    borderBottomLeftRadius,
-    borderBottomRightRadius,
-    borderTopLeftRadius,
-    borderTopRightRadius,
-    borderWidth,
-    height,
-    paddingBottom,
-    paddingHorizontal,
-    paddingTop,
-    raiseLevel,
-    stateWidth,
+  const { displayedText } = useButtonTextTransition({
+    children,
+    textTransition,
+  });
+  const { measuredWidth, onTextLayout, stateWidth } = useAutoWidth({
+    animatedOpacity,
     stretch,
-    textColor,
-    textFontFamily,
-    textLineHeight,
-    textSize,
     width,
+  });
+  const { activity, handlePress, handlePressIn, handlePressOut } =
+    usePressProgressController({
+      activeOpacity,
+      animatedActive,
+      animatedLoading,
+      animatedOpacity,
+      animatedValue,
+      activityOpacity,
+      disabled,
+      hasChildren: Boolean(children),
+      loadingOpacity,
+      onPress,
+      onPressIn,
+      onPressOut,
+      onPressedIn,
+      onPressedOut,
+      onProgressEnd,
+      onProgressStart,
+      progress,
+      progressLoadingTime,
+      springRelease,
+      textOpacity,
+      debouncedPressTime,
+    });
+
+  const {
+    accessibilityRole: dangerousAccessibilityRole,
+    accessibilityState: dangerousAccessibilityState,
+    children: _ignoredDangerousChildren,
+    hitSlop: dangerousHitSlop,
+    onLongPress: _ignoredDangerousOnLongPress,
+    onPress: _ignoredDangerousOnPress,
+    onPressIn: _ignoredDangerousOnPressIn,
+    onPressOut: _ignoredDangerousOnPressOut,
+    ...safePressableProps
+  } = dangerouslySetPressableProps as PressableProps & {
+    children?: React.ReactNode;
   };
+  const dynamicStyles = useMemo(
+    () =>
+      getStyles({
+        backgroundActive,
+        backgroundColor,
+        backgroundDarker,
+        backgroundPlaceholder,
+        backgroundProgress,
+        backgroundShadow,
+        borderColor,
+        borderRadius,
+        borderBottomLeftRadius,
+        borderBottomRightRadius,
+        borderTopLeftRadius,
+        borderTopRightRadius,
+        borderWidth,
+        height,
+        paddingBottom,
+        paddingHorizontal,
+        paddingTop,
+        raiseLevel,
+        stateWidth,
+        stretch,
+        textColor,
+        textFontFamily,
+        textLineHeight,
+        textSize,
+        width,
+      }),
+    [
+      backgroundActive,
+      backgroundColor,
+      backgroundDarker,
+      backgroundPlaceholder,
+      backgroundProgress,
+      backgroundShadow,
+      borderColor,
+      borderRadius,
+      borderBottomLeftRadius,
+      borderBottomRightRadius,
+      borderTopLeftRadius,
+      borderTopRightRadius,
+      borderWidth,
+      height,
+      paddingBottom,
+      paddingHorizontal,
+      paddingTop,
+      raiseLevel,
+      stateWidth,
+      stretch,
+      textColor,
+      textFontFamily,
+      textLineHeight,
+      textSize,
+      width,
+    ]
+  );
 
-  const dynamicStyles: any = useMemo(() => {
-    return getStyles(layout);
-  }, [
-    backgroundActive,
-    backgroundColor,
-    backgroundDarker,
-    backgroundPlaceholder,
-    backgroundProgress,
-    backgroundShadow,
-    borderColor,
-    borderRadius,
-    borderBottomLeftRadius,
-    borderBottomRightRadius,
-    borderTopLeftRadius,
-    borderTopRightRadius,
-    borderWidth,
-    height,
-    paddingBottom,
-    paddingHorizontal,
-    paddingTop,
-    raiseLevel,
-    stateWidth,
-    stretch,
-    textColor,
-    textFontFamily,
-    textLineHeight,
-    textSize,
-    width,
-  ]);
-
-  const getAnimatedValues = () => {
-    let width = containerWidth.current ? containerWidth.current * -1 : 0;
+  const animatedValues = useMemo(() => {
+    const offsetWidth = measuredWidth ? measuredWidth * -1 : 0;
 
     return {
-      animatedContainer: {
-        opacity: animatedOpacity,
-      },
-      animatedShadow: {
+      animatedActivity: {
+        opacity: activityOpacity,
         transform: [
           {
-            translateY: animatedValue.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, -raiseLevel / 2],
-            }),
+            scale: activityOpacity,
           },
         ],
+      },
+      animatedActive: {
+        opacity: animatedActive,
+      },
+      animatedContainer: {
+        opacity: animatedOpacity,
       },
       animatedContent: {
         transform: [
@@ -255,257 +256,38 @@ const AwesomeButton = ({
           },
         ],
       },
-      animatedActive: {
-        opacity: animatedActive,
-      },
-      animatedActivity: {
-        opacity: activityOpacity,
-        transform: [
-          {
-            scale: activityOpacity,
-          },
-        ],
-      },
       animatedProgress: {
         opacity: loadingOpacity,
         transform: [
           {
             translateX: animatedLoading.interpolate({
               inputRange: [0, 1],
-              outputRange: [width, 0],
+              outputRange: [offsetWidth, 0],
+            }),
+          },
+        ],
+      },
+      animatedShadow: {
+        transform: [
+          {
+            translateY: animatedValue.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -raiseLevel / 2],
             }),
           },
         ],
       },
     };
-  };
-
-  const onTextLayout = (event: LayoutChangeEvent) => {
-    containerWidth.current = event.nativeEvent.layout.width;
-    animatedOpacity.setValue(1);
-
-    if (width !== null && stretch === false) {
-      return;
-    }
-
-    if (
-      stateWidth !== event.nativeEvent.layout.width &&
-      (stateWidth === null || stateWidth < event.nativeEvent.layout.width)
-    ) {
-      setStateWidth(event.nativeEvent.layout.width);
-    }
-  };
-
-  const animatePressIn = useCallback(() => {
-    pressing.current = true;
-
-    pressAnimation.current = Animated.parallel([
-      animateTiming({
-        variable: animatedValue,
-        toValue: 1,
-        duration: ANIMATED_TIMING_OFF,
-      }),
-      animateTiming({
-        variable: animatedActive,
-        toValue: 1,
-        duration: ANIMATED_TIMING_OFF,
-      }),
-      animateTiming({
-        variable: animatedOpacity,
-        toValue: progress ? 1 : activeOpacity,
-        duration: ANIMATED_TIMING_OFF,
-      }),
-    ]);
-
-    pressAnimation.current.start(() => {
-      pressed.current = true;
-
-      onPressedIn && onPressedIn();
-    });
-  }, []);
-
-  const animateLoadingStart = () => {
-    animatedLoading.setValue(0);
-    animateTiming({
-      variable: animatedLoading,
-      toValue: 1,
-      duration: progressLoadingTime,
-    }).start();
-  };
-
-  const animateContentOut = () => {
-    Animated.parallel([
-      animateTiming({
-        variable: loadingOpacity,
-        toValue: 1,
-      }),
-      animateElastic({
-        variable: textOpacity,
-        toValue: 0,
-      }),
-      animateElastic({
-        variable: activityOpacity,
-        toValue: 1,
-      }),
-    ]).start();
-  };
-
-  const animateProgressEnd = (callback: any) => {
-    if (progress !== true) {
-      return;
-    }
-
-    if (timeout?.current) {
-      clearTimeout(timeout.current);
-    }
-
-    requestAnimationFrame(() => {
-      animateTiming({
-        variable: animatedLoading,
-        toValue: 1,
-      }).start(() => {
-        Animated.parallel([
-          animateElastic({
-            variable: textOpacity,
-            toValue: 1,
-          }),
-          animateElastic({
-            variable: activityOpacity,
-            toValue: 0,
-          }),
-          animateTiming({
-            variable: loadingOpacity,
-            toValue: 0,
-            delay: 100,
-          }),
-        ]).start(() => {
-          animateRelease(() => {
-            progressing.current = false;
-            callback && callback();
-            onProgressEnd && onProgressEnd();
-          });
-        });
-      });
-    });
-  };
-
-  const animateRelease = (callback?: any) => {
-    if (pressAnimation.current) {
-      pressAnimation.current.stop();
-    }
-
-    pressed.current = false;
-    pressing.current = false;
-
-    const end = () => {
-      pressed.current = false;
-      pressing.current = false;
-      callback && callback();
-      onPressedOut && onPressedOut();
-    };
-
-    if (springRelease === true) {
-      Animated.parallel([
-        animateSpring({
-          variable: animatedActive,
-          toValue: 0,
-        }),
-        animateSpring({
-          variable: animatedValue,
-          toValue: 0,
-        }),
-        animateTiming({
-          variable: animatedOpacity,
-          toValue: 1,
-        }),
-      ]).start(end);
-      return;
-    }
-
-    Animated.parallel([
-      animateTiming({
-        variable: animatedActive,
-        toValue: 0,
-        duration: ANIMATED_TIMING_OFF,
-      }),
-      animateTiming({
-        variable: animatedValue,
-        toValue: 0,
-        duration: ANIMATED_TIMING_OFF,
-      }),
-      animateTiming({
-        variable: animatedOpacity,
-        toValue: 1,
-      }),
-    ]).start(end);
-  };
-
-  const startProgress = () => {
-    progressing.current = true;
-    onProgressStart && onProgressStart();
-    setActivity(true);
-    animateLoadingStart();
-    animateContentOut();
-  };
-
-  const press = () => {
-    actioned.current = true;
-    if (progressing.current === true) {
-      return;
-    }
-
-    if (progress === true) {
-      requestAnimationFrame(startProgress);
-    }
-
-    debouncedPress(animateProgressEnd);
-  };
-
-  const handlePressIn = useCallback(
-    (event: GestureResponderEvent) => {
-      if (
-        disabled === true ||
-        !children ||
-        progressing.current === true ||
-        pressed.current === true
-      ) {
-        return;
-      }
-
-      onPressIn && onPressIn(event);
-      animatePressIn();
-    },
-    [disabled, children, onPressIn]
-  );
-
-  const handlePressOut = useCallback(
-    (event: GestureResponderEvent) => {
-      if (disabled === true || !children || progressing.current === true) {
-        return;
-      }
-
-      onPressOut && onPressOut(event);
-
-      // @ts-ignore
-      if (event?.nativeEvent?.contentOffset) {
-        animateRelease();
-        return;
-      }
-
-      if (pressing.current === true || raiseLevel === 0) {
-        press();
-
-        if (progress === true) {
-          return;
-        }
-      }
-
-      animateRelease();
-    },
-    [raiseLevel, children, progress, onPress]
-  );
-
-  const animatedValues = getAnimatedValues();
+  }, [
+    activityOpacity,
+    animatedActive,
+    animatedLoading,
+    animatedOpacity,
+    animatedValue,
+    loadingOpacity,
+    measuredWidth,
+    raiseLevel,
+  ]);
 
   const renderActivity = useMemo(() => {
     if (activity === false) {
@@ -530,39 +312,47 @@ const AwesomeButton = ({
         </Animated.View>
       </>
     );
-  }, [activity]);
+  }, [
+    activity,
+    activityColor,
+    animatedValues.animatedActivity,
+    animatedValues.animatedProgress,
+    dynamicStyles.progress,
+  ]);
 
-  const renderContent = useMemo(() => {
-    const animatedStyles = {
+  const animatedStyles = useMemo(
+    () => ({
       opacity: textOpacity,
       transform: [
         {
           scale: textOpacity,
         },
       ],
-    };
+    }),
+    [textOpacity]
+  );
 
+  const renderContent = useMemo(() => {
     if (!children) {
       return (
         <Placeholder
           animated={animatedPlaceholder}
-          style={[dynamicStyles.container__placeholder]}
+          style={dynamicStyles.container__placeholder}
         />
       );
     }
 
-    let content = children;
-
-    if (typeof children === 'string') {
-      content = (
+    const content =
+      typeof children === 'string' ? (
         <Text
           testID="aws-btn-content-text"
           style={[styles.container__text, dynamicStyles.container__text]}
         >
-          {children}
+          {displayedText ?? children}
         </Text>
+      ) : (
+        children
       );
-    }
 
     return (
       <Animated.View
@@ -577,14 +367,38 @@ const AwesomeButton = ({
         {after}
       </Animated.View>
     );
-  }, [children, before, after, textColor]);
+  }, [
+    after,
+    animatedPlaceholder,
+    animatedStyles,
+    before,
+    children,
+    displayedText,
+    dynamicStyles.container__placeholder,
+    dynamicStyles.container__text,
+    dynamicStyles.container__view,
+  ]);
+
+  const pressableHitSlop = hitSlop ?? dangerousHitSlop;
+  const accessibilityRole = dangerousAccessibilityRole ?? 'button';
+  const accessibilityState = useMemo(
+    () =>
+      getMergedAccessibilityState(dangerousAccessibilityState, {
+        busy: activity,
+        disabled,
+      }),
+    [activity, dangerousAccessibilityState, disabled]
+  );
 
   return (
     <Pressable
       testID="aws-btn-content-view"
-      hitSlop={hitSlop}
+      {...safePressableProps}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={accessibilityState}
+      hitSlop={pressableHitSlop}
       onLongPress={onLongPress}
-      {...dangerouslySetPressableProps}
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >
@@ -631,8 +445,8 @@ const AwesomeButton = ({
                 animatedValues.animatedActive,
               ]}
             />
-            {renderActivity}
             {renderContent}
+            {renderActivity}
           </View>
         </Animated.View>
       </Animated.View>

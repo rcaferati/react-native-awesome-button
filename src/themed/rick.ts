@@ -1,5 +1,9 @@
-import type { ButtonTypes } from '../Button';
-// @ts-ignore
+import type {
+  ThemeButtonDefinitions,
+  ThemeButtonStyle,
+  ThemeDefinition,
+  ThemeSizeDefinitions,
+} from '../types';
 import colors from './colors';
 import SocialTypes from './social';
 
@@ -9,7 +13,7 @@ const unity_light = '#8B3357';
 const unity_dark = '#531849';
 const unity_eyes = '#E4E994';
 
-const COMMON: ButtonTypes = {
+const COMMON: ThemeButtonStyle = {
   borderRadius: 25,
   height: 55,
   activityColor: '#FFFFFF',
@@ -18,7 +22,7 @@ const COMMON: ButtonTypes = {
 
 const SOCIAL_TYPES = SocialTypes(COMMON);
 
-const BUTTONS = {
+const BUTTONS: ThemeButtonDefinitions = {
   primary: {
     ...COMMON,
     backgroundColor: '#aad3ea',
@@ -77,7 +81,7 @@ const BUTTONS = {
   ...SOCIAL_TYPES,
 };
 
-const SIZE = {
+const SIZE: ThemeSizeDefinitions = {
   icon: {
     width: 55,
     height: 55,
@@ -100,10 +104,12 @@ const SIZE = {
   },
 };
 
-export default {
+const rick: ThemeDefinition = {
   title: 'Rick Theme',
   background: '#aad3ea',
   color: '#2e84b1',
   buttons: BUTTONS,
   size: SIZE,
 };
+
+export default rick;

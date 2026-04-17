@@ -7,13 +7,29 @@ import {
   ANIMATED_TIMING_IN,
 } from './constants';
 
+type AnimationOptions = {
+  variable: Animated.Value;
+  toValue: number;
+  duration?: number;
+  delay?: number;
+  easing?: (value: number) => number;
+};
+
+type SpringOptions = {
+  variable: Animated.Value;
+  toValue: number;
+  delay?: number;
+  tension?: number;
+  friction?: number;
+};
+
 export function animateTiming({
   variable,
   toValue,
   duration = ANIMATED_TIMING_IN,
   delay = 0,
   easing = Easing.out(Easing.cubic),
-}: any) {
+}: AnimationOptions) {
   return Animated.timing(variable, {
     toValue,
     duration,
@@ -28,7 +44,7 @@ export function animateLoop({
   toValue,
   duration = 3223,
   easing = Easing.linear,
-}: any) {
+}: AnimationOptions) {
   const animation = Animated.loop(
     Animated.timing(variable, {
       toValue,
@@ -48,7 +64,7 @@ export function animateSpring({
   delay = 0,
   tension = ANIMATED_SPRING_TENSION,
   friction = ANIMATED_SPRING_FRICTION,
-}: any) {
+}: SpringOptions) {
   return Animated.spring(variable, {
     toValue,
     tension,
@@ -58,7 +74,7 @@ export function animateSpring({
   });
 }
 
-export function animateElastic(params: any) {
+export function animateElastic(params: AnimationOptions) {
   return animateTiming({
     duration: ANIMATED_ELASTIC_DURATION,
     easing: Easing.elastic(ANIMATED_ELASTIC_BOUNCINESS),

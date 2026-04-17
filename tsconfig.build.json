@@ -1,5 +1,4 @@
-
 {
   "extends": "./tsconfig",
-  "exclude": ["example"]
+  "exclude": ["demo", "example", "lib", "node_modules", "scripts"]
 }

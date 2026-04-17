@@ -1,7 +1,7 @@
 {
-  "name": "react-native-really-awesome-button",
-  "version": "2.0.4",
-  "description": "React Native Button UI component that renders an 60fps animated set of progress enabled 3D performant buttons.",
+  "name": "@rcaferati/react-native-awesome-button",
+  "version": "3.0.0",
+  "description": "React Native button component that renders a 60fps animated set of progress-enabled 3D buttons.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
   "types": "lib/typescript/src/index.d.ts",
@@ -10,25 +10,20 @@
   "files": [
     "src",
     "lib",
-    "android",
-    "ios",
-    "cpp",
-    "react-native-really-awesome-button.podspec",
-    "!lib/typescript/example",
-    "!android/build",
-    "!ios/build",
     "!**/__tests__",
     "!**/__fixtures__",
     "!**/__mocks__"
   ],
   "scripts": {
-    "test": "jest",
+    "test": "node -r ./scripts/jest-node-compat.js ./node_modules/jest/bin/jest.js --watchman=false",
     "typescript": "tsc --noEmit",
-    "lint": "eslint \"**/*.{js,ts,tsx}\"",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"scripts/**/*.ts\"",
     "prepare": "bob build",
     "release": "release-it",
-    "example": "yarn --cwd example",
-    "bootstrap": "yarn example && yarn && yarn example pods"
+    "demo": "yarn --cwd demo start",
+    "demo:android": "yarn --cwd demo android",
+    "demo:ios": "yarn --cwd demo ios",
+    "demo:web": "yarn --cwd demo web"
   },
   "keywords": [
     "button",
@@ -41,48 +36,52 @@
     "ios",
     "android"
   ],
-  "repository": "https://github.com/rcaferati/react-native-really-awesome-button",
-  "author": "rcaferati <rafael@caferati.me> (https://github.com/rcaferati)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rcaferati/react-native-awesome-button.git"
+  },
+  "author": "rcaferati <rafael@caferati.dev> (https://github.com/rcaferati)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rcaferati/react-native-really-awesome-button/issues"
+    "url": "https://github.com/rcaferati/react-native-awesome-button/issues"
   },
-  "homepage": "https://github.com/rcaferati/react-native-really-awesome-button#readme",
+  "homepage": "https://github.com/rcaferati/react-native-awesome-button#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
     "@arkweid/lefthook": "^0.7.7",
+    "@babel/core": "^7.28.5",
     "@babel/eslint-parser": "^7.18.2",
+    "@babel/runtime": "^7.28.4",
     "@commitlint/config-conventional": "^17.0.2",
     "@react-native-community/eslint-config": "^3.0.2",
+    "@react-native/babel-preset": "0.76.0",
     "@release-it/conventional-changelog": "^5.0.0",
-    "@types/jest": "^28.1.2",
+    "@types/jest": "^29.5.12",
     "@types/lodash.debounce": "^4.0.7",
-    "@types/react": "~17.0.21",
-    "@types/react-native": "0.68.0",
+    "@types/react": "18.3.12",
     "commitlint": "^17.0.2",
     "eslint": "^8.4.1",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "jest": "^28.1.1",
+    "jest": "29.7.0",
     "lodash.debounce": "^4.0.8",
     "pod-install": "^0.1.0",
     "prettier": "^2.0.5",
-    "react": "17.0.2",
-    "react-native": "0.68.2",
-    "react-native-builder-bob": "^0.18.3",
-    "react-native-owl": "^1.1.1",
-    "react-test-renderer": "^17.0.2",
+    "react": "18.2.0",
+    "react-native": "0.76.0",
+    "react-native-builder-bob": "0.40.13",
+    "react-test-renderer": "18.2.0",
     "release-it": "^15.0.0",
-    "typescript": "^4.5.2"
+    "typescript": "5.6.3"
   },
   "resolutions": {
-    "@types/react": "17.0.21"
+    "@types/react": "18.3.12"
   },
   "peerDependencies": {
-    "react": ">17.0.0",
-    "react-native": ">0.60.0"
+    "react": ">=18.2.0",
+    "react-native": ">=0.76.0"
   },
   "jest": {
     "preset": "react-native",
@@ -116,6 +115,14 @@
   "eslintConfig": {
     "root": true,
     "parser": "@babel/eslint-parser",
+    "parserOptions": {
+      "requireConfigFile": false,
+      "babelOptions": {
+        "presets": [
+          "module:@react-native/babel-preset"
+        ]
+      }
+    },
     "extends": [
       "@react-native-community",
       "prettier"
@@ -130,7 +137,8 @@
           "trailingComma": "es5",
           "useTabs": false
         }
-      ]
+      ],
+      "@typescript-eslint/no-unused-vars": "off"
     }
   },
   "eslintIgnore": [

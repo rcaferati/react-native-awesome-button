@@ -1,5 +1,9 @@
-import type { ButtonTypes } from '../Button';
-// @ts-ignore
+import type {
+  ThemeButtonDefinitions,
+  ThemeButtonStyle,
+  ThemeDefinition,
+  ThemeSizeDefinitions,
+} from '../types';
 import colors from './colors';
 import SocialTypes from './social';
 
@@ -9,7 +13,7 @@ const pink = '#EBA0BD';
 const teal = '#3eb7b9';
 const white = '#FFFFFF';
 
-const COMMON: ButtonTypes = {
+const COMMON: ThemeButtonStyle = {
   borderRadius: 4,
   height: 55,
   activityColor: white,
@@ -20,7 +24,7 @@ const COMMON: ButtonTypes = {
 
 const SOCIAL_TYPES = SocialTypes(COMMON);
 
-const BUTTONS = {
+const BUTTONS: ThemeButtonDefinitions = {
   primary: {
     ...COMMON,
     backgroundColor: blue,
@@ -61,7 +65,7 @@ const BUTTONS = {
   ...SOCIAL_TYPES,
 };
 
-const SIZE = {
+const SIZE: ThemeSizeDefinitions = {
   icon: {
     width: 55,
     height: 55,
@@ -84,10 +88,12 @@ const SIZE = {
   },
 };
 
-export default {
+const bojack: ThemeDefinition = {
   title: 'Bojack Theme',
   background: '#4f6fc4',
   color: '#fff',
   buttons: BUTTONS,
   size: SIZE,
 };
+
+export default bojack;

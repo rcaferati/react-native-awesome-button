@@ -1,9 +1,13 @@
-import type { ButtonTypes } from '../Button';
-// @ts-ignore
+import type {
+  ThemeButtonDefinitions,
+  ThemeButtonStyle,
+  ThemeDefinition,
+  ThemeSizeDefinitions,
+} from '../types';
 import colors from './colors';
 import SocialTypes from './social';
 
-const COMMON: ButtonTypes = {
+const COMMON: ThemeButtonStyle = {
   borderRadius: 8,
   height: 55,
   activityColor: '#FFE11D',
@@ -18,7 +22,7 @@ const yellow = '#FDF353';
 const brown = '#876753';
 const dark = '#2D2D3A';
 
-const BUTTONS = {
+const BUTTONS: ThemeButtonDefinitions = {
   primary: {
     ...COMMON,
     backgroundColor: blue,
@@ -71,7 +75,7 @@ const BUTTONS = {
   ...SOCIAL_TYPES,
 };
 
-const SIZE = {
+const SIZE: ThemeSizeDefinitions = {
   icon: {
     width: 55,
     height: 55,
@@ -94,10 +98,12 @@ const SIZE = {
   },
 };
 
-export default {
+const cartman: ThemeDefinition = {
   title: 'Cartman Theme',
   background: '#EE3253',
   color: '#FFE11D',
   buttons: BUTTONS,
   size: SIZE,
 };
+
+export default cartman;

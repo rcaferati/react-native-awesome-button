@@ -1,52 +1,45 @@
-import {
-  TWITTER,
-  MESSENGER,
-  FACEBOOK,
-  GITHUB,
-  LINKEDIN,
-  WHATSAPP,
-  REDDIT,
-  PINTEREST,
-  YOUTUBE,
-} from './constants';
+import { SOCIAL_BUTTONS } from './constants';
+import type { SocialButtonVariant, ThemeButtonStyle } from '../../types';
 
-export default function (common: any) {
+export default function createSocialTypes(
+  common: ThemeButtonStyle
+): Record<SocialButtonVariant, ThemeButtonStyle> {
   return {
     twitter: {
       ...common,
-      ...TWITTER,
+      ...SOCIAL_BUTTONS.twitter,
     },
     messenger: {
       ...common,
-      ...MESSENGER,
+      ...SOCIAL_BUTTONS.messenger,
     },
     facebook: {
       ...common,
-      ...FACEBOOK,
+      ...SOCIAL_BUTTONS.facebook,
     },
     github: {
       ...common,
-      ...GITHUB,
+      ...SOCIAL_BUTTONS.github,
     },
     linkedin: {
       ...common,
-      ...LINKEDIN,
+      ...SOCIAL_BUTTONS.linkedin,
     },
     whatsapp: {
       ...common,
-      ...WHATSAPP,
+      ...SOCIAL_BUTTONS.whatsapp,
     },
     reddit: {
       ...common,
-      ...REDDIT,
+      ...SOCIAL_BUTTONS.reddit,
     },
     pinterest: {
       ...common,
-      ...PINTEREST,
+      ...SOCIAL_BUTTONS.pinterest,
     },
     youtube: {
       ...common,
-      ...YOUTUBE,
+      ...SOCIAL_BUTTONS.youtube,
     },
   };
 }

@@ -6,8 +6,15 @@ import mysterion from './mysterion';
 import summer from './summer';
 import rick from './rick';
 import basic from './basic';
+import type {
+  RegisteredThemeDefinition,
+  ThemeDefinition,
+  ThemeName,
+} from '../types';
 
-const themes: any = {
+const DEFAULT_THEME_NAME: ThemeName = 'basic';
+
+const themes: Record<ThemeName, ThemeDefinition> = {
   basic,
   bojack,
   cartman,
@@ -18,32 +25,49 @@ const themes: any = {
   bruce,
 };
 
-const getThemeByIndex = (index: number | null = 0) => {
-  const keys: any = Object.keys(themes);
+const getThemeKeys = (): ThemeName[] => Object.keys(themes) as ThemeName[];
 
-  if (index === null || !keys[index]) {
-    return null;
-  }
+const getThemeByIndex = (
+  index: number | null = 0
+): RegisteredThemeDefinition => {
+  const keys = getThemeKeys();
+  const safeIndex = index === null || !keys[index] ? 0 : index;
+  const themeName = keys[safeIndex] ?? DEFAULT_THEME_NAME;
 
   return {
-    ...themes[keys[index]],
-    next: !!keys[index + 1],
-    prev: !!keys[index - 1],
-    name: keys[index],
+    ...themes[themeName],
+    next: !!keys[safeIndex + 1],
+    prev: !!keys[safeIndex - 1],
+    name: themeName,
   };
 };
 
-const getThemeByName = (name: string) => {
-  const keys = Object.keys(themes);
-  const index = keys.indexOf(name);
+const getThemeByName = (name: string): RegisteredThemeDefinition => {
+  const keys = getThemeKeys();
+  const index = keys.findIndex((key) => key === name);
   if (index === -1) {
-    return null;
+    return getThemeByIndex(0);
   }
   return getThemeByIndex(index);
 };
 
-const getTheme = (index: number | null = 0, name: string | null = null) => {
-  return name ? getThemeByName(name) : getThemeByIndex(index);
-};
+function getTheme(
+  index?: number | null,
+  name?: ThemeName | null
+): RegisteredThemeDefinition;
+function getTheme(
+  index: number | null = 0,
+  name: string | null = null
+): RegisteredThemeDefinition {
+  if (name) {
+    return getThemeByName(name);
+  }
+
+  if (index === null) {
+    return getThemeByName(DEFAULT_THEME_NAME);
+  }
+
+  return getThemeByIndex(index);
+}
 
 export default getTheme;

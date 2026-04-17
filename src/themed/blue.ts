@@ -9,7 +9,7 @@ const COMMON: ButtonTypes = {
 
 const SOCIAL_TYPES = SocialTypes(COMMON);
 
-const BUTTONS: any = {
+const BUTTONS = {
   primary: {
     ...COMMON,
     backgroundColor: '#1775c8',
@@ -54,7 +54,7 @@ const BUTTONS: any = {
   ...SOCIAL_TYPES,
 };
 
-const SIZE: any = {
+const SIZE = {
   small: {
     width: 120,
     height: 42,

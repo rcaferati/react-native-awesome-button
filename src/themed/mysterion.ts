@@ -1,9 +1,13 @@
-import type { ButtonTypes } from '../Button';
-// @ts-ignore
+import type {
+  ThemeButtonDefinitions,
+  ThemeButtonStyle,
+  ThemeDefinition,
+  ThemeSizeDefinitions,
+} from '../types';
 import colors from './colors';
 import SocialTypes from './social';
 
-const COMMON: ButtonTypes = {
+const COMMON: ThemeButtonStyle = {
   borderRadius: 24,
   height: 55,
   activityColor: '#FFF',
@@ -19,7 +23,7 @@ const yellow = '#FDF353';
 
 const SOCIAL_TYPES = SocialTypes(COMMON);
 
-const BUTTONS = {
+const BUTTONS: ThemeButtonDefinitions = {
   primary: {
     ...COMMON,
     backgroundColor: primary,
@@ -68,7 +72,7 @@ const BUTTONS = {
   ...SOCIAL_TYPES,
 };
 
-const SIZE = {
+const SIZE: ThemeSizeDefinitions = {
   icon: {
     width: 55,
     height: 55,
@@ -91,10 +95,12 @@ const SIZE = {
   },
 };
 
-export default {
+const mysterion: ThemeDefinition = {
   title: 'Mysterion Theme',
   background: primary,
   color: '#FFF',
   buttons: BUTTONS,
   size: SIZE,
 };
+
+export default mysterion;

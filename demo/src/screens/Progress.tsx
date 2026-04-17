@@ -1,12 +1,22 @@
 import React, { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
-import { ThemedButton } from 'react-native-really-awesome-button';
+import {
+  ThemedButton,
+  type ProgressCompletionHandler,
+} from '@rcaferati/react-native-awesome-button';
 import Container from '../components/Container';
 import Section from '../components/Section';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { ProgressDemoHandler, ProgressScreenProps } from '../types';
 
-export default function Progress({ navigation }: any) {
-  const handleTimeout = (next: any) => setTimeout(next, 1000);
+export default function Progress({ navigation }: ProgressScreenProps) {
+  const handleTimeout: ProgressDemoHandler = (
+    next?: ProgressCompletionHandler
+  ) => {
+    setTimeout(() => {
+      next?.();
+    }, 1000);
+  };
   const theme = 'bojack';
 
   useEffect(() => {
@@ -17,7 +27,7 @@ export default function Progress({ navigation }: any) {
       },
       headerTintColor: '#FFF',
     });
-  }, []);
+  }, [navigation]);
 
   return (
     <Container>
@@ -101,9 +111,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
   },
-  text: {
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  iconLeft: { marginRight: 8 },
 });

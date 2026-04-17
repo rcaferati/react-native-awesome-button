@@ -1,5 +1,5 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
+import renderer, { act } from 'react-test-renderer';
 import AwesomeButton from '../Button';
 
 const DEFAULT_TEXT = 'Default';
@@ -104,5 +104,30 @@ describe('AwesomeButton', () => {
     });
 
     expect(element.props.testID).toBe('aws-btn-content-placeholder');
+  });
+
+  it('should treat width auto as the measured auto-width mode', () => {
+    const component = renderer.create(
+      <AwesomeButton width="auto">{DEFAULT_TEXT}</AwesomeButton>
+    );
+    const container = component.root.findByProps({ testID: 'aws-btn-content-2' });
+    const textView = component.root.findByProps({ testID: 'aws-btn-text' });
+
+    expect(container.props.style[1].width).toBeUndefined();
+
+    act(() => {
+      textView.props.onLayout({
+        nativeEvent: {
+          layout: {
+            width: 132,
+          },
+        },
+      });
+    });
+
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-2' }).props.style[1]
+        .width
+    ).toBe(132);
   });
 });

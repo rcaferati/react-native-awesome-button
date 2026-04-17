@@ -1,22 +1,36 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import {
   createNativeStackNavigator,
+  type NativeStackNavigationProp,
   NativeStackNavigationOptions,
 } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ThemedButton, getTheme } from 'react-native-really-awesome-button';
+import { ThemedButton, getTheme } from '@rcaferati/react-native-awesome-button';
 import ThemeScreen from '../screens/ThemeScreen';
 import Social from '../screens/Social';
 import Progress from '../screens/Progress';
 import { Entypo, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import type { DemoTabParamList, DemoThemeStackParamList } from '../types';
 
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator<DemoTabParamList>();
+const Stack = createNativeStackNavigator<DemoThemeStackParamList>();
 
-const options = ({ route, navigation }: any) => {
-  let index =
-    typeof route?.params?.index !== 'undefined' ? route.params.index : 0;
+type ThemeScreenRoute = RouteProp<DemoThemeStackParamList, 'ThemeScreen'>;
+type ThemeScreenNavigation = NativeStackNavigationProp<
+  DemoThemeStackParamList,
+  'ThemeScreen'
+>;
+
+const options = ({
+  route,
+  navigation,
+}: {
+  route: ThemeScreenRoute;
+  navigation: ThemeScreenNavigation;
+}) => {
+  const index = route.params?.index ?? 0;
   const theme = getTheme(index);
 
   const navigationOptions: NativeStackNavigationOptions = {
@@ -79,13 +93,12 @@ function HomeNavigator() {
   );
 }
 
-//FontAwesome5 brush
 function App() {
   return (
     <NavigationContainer>
       <Tab.Navigator
         screenOptions={({ route }) => ({
-          tabBarIcon: ({ color }: any) => {
+          tabBarIcon: ({ color }: { color: string }) => {
             if (route.name === 'Themed Buttons') {
               return <FontAwesome5 name="brush" size={21} color={color} />;
             }
