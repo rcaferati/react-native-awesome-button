@@ -98,6 +98,7 @@ const AwesomeButton = ({
   onLongPress,
   dangerouslySetPressableProps = {},
   progress = false,
+  showProgressBar = true,
   paddingBottom = 0,
   paddingTop = 0,
   progressLoadingTime = ANIMATED_TIMING_LOADING,
@@ -296,14 +297,16 @@ const AwesomeButton = ({
 
     return (
       <>
-        <Animated.View
-          testID="aws-btn-progress"
-          style={[
-            styles.progress,
-            dynamicStyles.progress,
-            animatedValues.animatedProgress,
-          ]}
-        />
+        {showProgressBar === true ? (
+          <Animated.View
+            testID="aws-btn-progress"
+            style={[
+              styles.progress,
+              dynamicStyles.progress,
+              animatedValues.animatedProgress,
+            ]}
+          />
+        ) : null}
         <Animated.View
           testID="aws-btn-activity-indicator"
           style={[styles.container__activity, animatedValues.animatedActivity]}
@@ -318,6 +321,7 @@ const AwesomeButton = ({
     animatedValues.animatedActivity,
     animatedValues.animatedProgress,
     dynamicStyles.progress,
+    showProgressBar,
   ]);
 
   const animatedStyles = useMemo(
@@ -381,6 +385,8 @@ const AwesomeButton = ({
 
   const pressableHitSlop = hitSlop ?? dangerousHitSlop;
   const accessibilityRole = dangerousAccessibilityRole ?? 'button';
+  const suppressProgressDarkening =
+    progress === true && activity === true && showProgressBar === false;
   const accessibilityState = useMemo(
     () =>
       getMergedAccessibilityState(dangerousAccessibilityState, {
@@ -443,6 +449,7 @@ const AwesomeButton = ({
                 styles.activeBackground,
                 dynamicStyles.activeBackground,
                 animatedValues.animatedActive,
+                suppressProgressDarkening ? { opacity: 0 } : null,
               ]}
             />
             {renderContent}

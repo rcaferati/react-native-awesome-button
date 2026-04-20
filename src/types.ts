@@ -37,6 +37,7 @@ export interface AwesomeButtonProps {
   borderLeftBottomRadius?: number;
   borderWidth?: number;
   progressLoadingTime?: number;
+  showProgressBar?: boolean;
   extra?: ReactNode;
   disabled?: boolean;
   height?: number;
