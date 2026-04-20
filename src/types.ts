@@ -21,6 +21,7 @@ export interface AwesomeButtonProps {
   activityColor?: string;
   activeOpacity?: number;
   animatedPlaceholder?: boolean;
+  animateSize?: boolean;
   backgroundActive?: string;
   backgroundColor?: string;
   backgroundDarker?: string;

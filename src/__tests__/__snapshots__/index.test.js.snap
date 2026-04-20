@@ -89,6 +89,7 @@ exports[`AwesomeButton should render 1`] = `
             "height": 56,
             "width": undefined,
           },
+          null,
         ]
       }
       testID="aws-btn-bottom"
@@ -283,6 +284,7 @@ exports[`AwesomeButton should render a default text children 1`] = `
             "height": 56,
             "width": undefined,
           },
+          null,
         ]
       }
       testID="aws-btn-bottom"
@@ -391,6 +393,39 @@ exports[`AwesomeButton should render a default text children 1`] = `
           </Text>
         </View>
       </View>
+    </View>
+    <View
+      onLayout={[Function]}
+      pointerEvents="none"
+      style={
+        {
+          "alignSelf": "flex-start",
+          "borderWidth": 0,
+          "flexDirection": "row",
+          "opacity": 0,
+          "paddingBottom": 0,
+          "paddingHorizontal": 16,
+          "paddingTop": 0,
+          "position": "absolute",
+        }
+      }
+      testID="aws-btn-hidden-measure"
+    >
+      <Text
+        style={
+          {
+            "color": "#FFFFFF",
+            "fontFamily": undefined,
+            "fontSize": 14,
+            "fontWeight": "bold",
+            "lineHeight": 20,
+            "textAlign": "center",
+          }
+        }
+        testID="aws-btn-hidden-measure-text"
+      >
+        Default
+      </Text>
     </View>
   </View>
 </View>

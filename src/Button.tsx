@@ -8,9 +8,11 @@ import {
   View,
 } from 'react-native';
 import { getStyles, styles } from './styles';
-import useAutoWidth from './useAutoWidth';
-import useButtonTextTransition from './useButtonTextTransition';
 import usePressProgressController from './usePressProgressController';
+import useButtonSizeBehavior, {
+  getHiddenMeasurementContainerStyle,
+  getHiddenMeasurementTextStyle,
+} from './useButtonSizeBehavior';
 import {
   ANIMATED_TIMING_LOADING,
   DEFAULT_ACTIVITY_COLOR,
@@ -67,6 +69,7 @@ const AwesomeButton = ({
   activityColor = DEFAULT_ACTIVITY_COLOR,
   activeOpacity = DEFAULT_ACTIVE_OPACITY,
   animatedPlaceholder = true,
+  animateSize = true,
   backgroundActive = DEFAULT_BACKGROUND_ACTIVE,
   backgroundColor = DEFAULT_BACKGROUND_COLOR,
   backgroundDarker = DEFAULT_BACKGROUND_DARKER,
@@ -124,13 +127,27 @@ const AwesomeButton = ({
   const animatedOpacity = useRef(
     new Animated.Value(width === null && stretch !== true ? 0 : 1)
   ).current;
-  const { displayedText } = useButtonTextTransition({
-    children,
-    textTransition,
-  });
-  const { measuredWidth, onTextLayout, stateWidth } = useAutoWidth({
+  const {
+    displayedText,
+    hiddenMeasurementKey,
+    hiddenMeasurementText,
+    onHiddenMeasurementLayout,
+    onVisibleContentLayout,
+    resolvedWidth,
+    sizeAnimatedStyles,
+  } = useButtonSizeBehavior({
+    after,
     animatedOpacity,
+    animateSize,
+    before,
+    children,
+    extra,
+    height,
+    paddingBottom,
+    paddingTop,
+    raiseLevel,
     stretch,
+    textTransition,
     width,
   });
   const { activity, handlePress, handlePressIn, handlePressOut } =
@@ -192,7 +209,7 @@ const AwesomeButton = ({
         paddingHorizontal,
         paddingTop,
         raiseLevel,
-        stateWidth,
+        stateWidth: width === null && stretch !== true ? resolvedWidth : null,
         stretch,
         textColor,
         textFontFamily,
@@ -219,7 +236,7 @@ const AwesomeButton = ({
       paddingHorizontal,
       paddingTop,
       raiseLevel,
-      stateWidth,
+      resolvedWidth,
       stretch,
       textColor,
       textFontFamily,
@@ -230,7 +247,7 @@ const AwesomeButton = ({
   );
 
   const animatedValues = useMemo(() => {
-    const offsetWidth = measuredWidth ? measuredWidth * -1 : 0;
+    const offsetWidth = resolvedWidth ? resolvedWidth * -1 : 0;
 
     return {
       animatedActivity: {
@@ -286,7 +303,7 @@ const AwesomeButton = ({
     animatedOpacity,
     animatedValue,
     loadingOpacity,
-    measuredWidth,
+    resolvedWidth,
     raiseLevel,
   ]);
 
@@ -334,6 +351,28 @@ const AwesomeButton = ({
       ],
     }),
     [textOpacity]
+  );
+
+  const hiddenMeasurementContainerStyle = useMemo(
+    () =>
+      getHiddenMeasurementContainerStyle({
+        borderWidth,
+        paddingBottom,
+        paddingHorizontal,
+        paddingTop,
+      }),
+    [borderWidth, paddingBottom, paddingHorizontal, paddingTop]
+  );
+
+  const hiddenMeasurementTextStyle = useMemo(
+    () =>
+      getHiddenMeasurementTextStyle({
+        textColor,
+        textFontFamily,
+        textLineHeight,
+        textSize,
+      }),
+    [textColor, textFontFamily, textLineHeight, textSize]
   );
 
   const renderContent = useMemo(() => {
@@ -414,6 +453,7 @@ const AwesomeButton = ({
           styles.container,
           dynamicStyles.container,
           animatedValues.animatedContainer,
+          sizeAnimatedStyles.container,
           style,
         ]}
       >
@@ -423,11 +463,16 @@ const AwesomeButton = ({
             styles.shadow,
             dynamicStyles.shadow,
             animatedValues.animatedShadow,
+            sizeAnimatedStyles.shadow,
           ]}
         />
         <View
           testID="aws-btn-bottom"
-          style={[styles.bottom, dynamicStyles.bottom]}
+          style={[
+            styles.bottom,
+            dynamicStyles.bottom,
+            sizeAnimatedStyles.bottom,
+          ]}
         />
         <Animated.View
           testID="aws-btn-content"
@@ -435,12 +480,13 @@ const AwesomeButton = ({
             styles.content,
             dynamicStyles.content,
             animatedValues.animatedContent,
+            sizeAnimatedStyles.content,
           ]}
         >
           <View
             testID="aws-btn-text"
             style={[styles.text, dynamicStyles.text]}
-            onLayout={onTextLayout}
+            onLayout={onVisibleContentLayout}
           >
             {extra}
             <Animated.View
@@ -449,6 +495,7 @@ const AwesomeButton = ({
                 styles.activeBackground,
                 dynamicStyles.activeBackground,
                 animatedValues.animatedActive,
+                sizeAnimatedStyles.activeBackground,
                 suppressProgressDarkening ? { opacity: 0 } : null,
               ]}
             />
@@ -456,6 +503,22 @@ const AwesomeButton = ({
             {renderActivity}
           </View>
         </Animated.View>
+        {hiddenMeasurementText !== null ? (
+          <View
+            key={hiddenMeasurementKey ?? undefined}
+            testID="aws-btn-hidden-measure"
+            pointerEvents="none"
+            style={hiddenMeasurementContainerStyle}
+            onLayout={onHiddenMeasurementLayout}
+          >
+            <Text
+              testID="aws-btn-hidden-measure-text"
+              style={hiddenMeasurementTextStyle}
+            >
+              {hiddenMeasurementText}
+            </Text>
+          </View>
+        ) : null}
       </Animated.View>
     </Pressable>
   );

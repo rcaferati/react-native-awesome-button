@@ -32,6 +32,44 @@ export function SaveButton() {
 
 `AwesomeButton` supports both plain string labels and arbitrary React Native content.
 
+## Size Changes
+
+`animateSize` is enabled by default.
+
+- fixed-size `width` / `height` changes animate with `125ms cubic-bezier(0.3, 0.05, 0.2, 1)`
+- auto-width string labels grow and shrink when their measured target width changes
+- with `textTransition` plus auto width:
+  - wider labels grow first, then animate text
+  - narrower labels animate text first, then shrink
+- `animateSize={false}` keeps size changes instant
+- fixed-to-auto and auto-to-fixed changes remain instant in `3.1.0`
+
+```tsx
+import AwesomeButton, {
+  ThemedButton,
+} from '@rcaferati/react-native-awesome-button';
+
+export function SizeExample({
+  isLong,
+  size,
+}: {
+  isLong: boolean;
+  size: 'small' | 'medium' | 'large';
+}) {
+  const label = isLong ? 'Open analytics dashboard' : 'Open';
+
+  return (
+    <>
+      <AwesomeButton textTransition>{label}</AwesomeButton>
+      <AwesomeButton animateSize={false}>{label}</AwesomeButton>
+      <ThemedButton name="rick" size={size}>
+        {size}
+      </ThemedButton>
+    </>
+  );
+}
+```
+
 ## Progress Buttons
 
 When `progress` is enabled, `onPress` receives a `next` callback. Call it when your work is done to complete the progress animation and release the button.
@@ -187,6 +225,7 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `activityColor` | `string` | `#FFFFFF` | Activity indicator color shown during progress mode. |
 | `activeOpacity` | `number` | `1` | Opacity applied while the button is pressed. |
 | `animatedPlaceholder` | `boolean` | `true` | Enables the shimmer loop when the button has no `children`. |
+| `animateSize` | `boolean` | `true` | Animates fixed-size geometry changes and auto-width string-label changes. |
 | `backgroundActive` | `string` | `rgba(0, 0, 0, 0.15)` | Active overlay color rendered over the face while pressed. |
 | `backgroundColor` | `string` | `#c0c0c0` | Main front-face background color. |
 | `backgroundDarker` | `string` | `#9f9f9f` | Bottom-face background color used for the raised 3D effect. |
@@ -214,6 +253,7 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `paddingBottom` | `number` | `0` | Additional bottom padding for the content row. |
 | `progress` | `boolean` | `false` | Enables the progress-button flow. `onPress` receives a `next` callback in this mode. |
 | `progressLoadingTime` | `number` | `3000` | Duration of the loading bar animation in progress mode. |
+| `showProgressBar` | `boolean` | `true` | Keeps the progress indicator visible while the button is in loading mode. |
 | `raiseLevel` | `number` | `4` | Vertical raise distance used to render the 3D depth effect. |
 | `springRelease` | `boolean` | `true` | Uses spring-based release animation instead of timing-based release. |
 | `stretch` | `boolean` | `false` | Makes the button fill the available horizontal space. |
@@ -222,8 +262,8 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `textFontFamily` | `string` | `undefined` | Optional font family for string labels. |
 | `textLineHeight` | `number` | `20` | Placeholder bar height and string label line-height baseline. |
 | `textSize` | `number` | `14` | Default font size for string labels. |
-| `textTransition` | `boolean` | `false` | Enables the built-in scramble/reveal animation when a plain string label changes after mount. |
-| `width` | `number \| 'auto' \| null` | `null` | Fixed width, measured auto width (`null` / `'auto'`), or pair with `stretch` for full width. |
+| `textTransition` | `boolean` | `false` | Enables the built-in scramble/reveal animation for plain string labels. In auto-width mode, wider labels grow first and narrower labels shrink last. |
+| `width` | `number \| 'auto' \| null` | `null` | Fixed width, measured auto width (`null` / `'auto'`), or pair with `stretch` for full width. Auto-width string labels can now both grow and shrink. |
 | `onPress` | `(next?) => void` | `() => undefined` | Main press callback. In `progress` mode it receives the completion handler. |
 | `onLongPress` | `PressableProps['onLongPress']` | `undefined` | Native long-press callback forwarded to `Pressable`. |
 | `onPressIn` | `(event) => void` | `() => undefined` | Native press-in observer callback. |
@@ -276,6 +316,7 @@ The `demo/` app is an Expo SDK 52 compatibility harness for:
 - progress buttons
 - variant transition examples
 - text transition examples
+- size animation parity examples
 - empty placeholder states
 - flat button variants
 - before / after / icon content

@@ -107,16 +107,23 @@ describe('AwesomeButton', () => {
   });
 
   it('should treat width auto as the measured auto-width mode', () => {
-    const component = renderer.create(
-      <AwesomeButton width="auto">{DEFAULT_TEXT}</AwesomeButton>
-    );
+    let component;
+
+    act(() => {
+      component = renderer.create(
+        <AwesomeButton width="auto">{DEFAULT_TEXT}</AwesomeButton>
+      );
+    });
+
     const container = component.root.findByProps({ testID: 'aws-btn-content-2' });
-    const textView = component.root.findByProps({ testID: 'aws-btn-text' });
+    const hiddenMeasure = component.root.findByProps({
+      testID: 'aws-btn-hidden-measure',
+    });
 
     expect(container.props.style[1].width).toBeUndefined();
 
     act(() => {
-      textView.props.onLayout({
+      hiddenMeasure.props.onLayout({
         nativeEvent: {
           layout: {
             width: 132,
@@ -126,8 +133,9 @@ describe('AwesomeButton', () => {
     });
 
     expect(
-      component.root.findByProps({ testID: 'aws-btn-content-2' }).props.style[1]
-        .width
-    ).toBe(132);
+      component.root
+        .findByProps({ testID: 'aws-btn-content-2' })
+        .props.style.some((style) => style?.width === 132)
+    ).toBe(true);
   });
 });

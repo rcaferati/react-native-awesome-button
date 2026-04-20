@@ -38,12 +38,16 @@ export default function Sizing({ navigation }: SizingScreenProps) {
           Evaluates how the button reacts when a plain string label switches
           between short and long content.
         </Text>
-        <Text style={styles.variantLabel}>With text transition</Text>
+        <Text style={styles.variantLabel}>Animated with text transition</Text>
         <AwesomeButton style={styles.button} textTransition>
           {autoWidthLabel}
         </AwesomeButton>
-        <Text style={styles.variantLabel}>Without text transition</Text>
+        <Text style={styles.variantLabel}>Animated without text transition</Text>
         <AwesomeButton style={styles.button}>{autoWidthLabel}</AwesomeButton>
+        <Text style={styles.variantLabel}>Instant opt-out</Text>
+        <AwesomeButton animateSize={false} style={styles.button}>
+          {autoWidthLabel}
+        </AwesomeButton>
         <ThemedButton
           name="basic"
           style={styles.controlButton}
@@ -59,7 +63,18 @@ export default function Sizing({ navigation }: SizingScreenProps) {
           Evaluates how a themed button behaves when its built-in size preset
           changes between fixed widths.
         </Text>
+        <Text style={styles.variantLabel}>Animated</Text>
         <ThemedButton
+          name="rick"
+          type="primary"
+          size={currentThemeSize}
+          style={styles.button}
+        >
+          {currentThemeSizeLabel}
+        </ThemedButton>
+        <Text style={styles.variantLabel}>Instant opt-out</Text>
+        <ThemedButton
+          animateSize={false}
           name="rick"
           type="primary"
           size={currentThemeSize}
