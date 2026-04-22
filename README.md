@@ -326,6 +326,13 @@ The `demo/` app is an Expo SDK 52 compatibility harness for:
 
 See [`demo/README.md`](./demo/README.md) for demo-specific instructions.
 
+## Author
+
+**Rafael Caferati**  
+Website: https://caferati.dev  
+LinkedIn: https://linkedin.com/in/rcaferati  
+Instagram: https://instagram.com/rcaferati
+
 ## License
 
 MIT.
