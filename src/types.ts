@@ -21,6 +21,7 @@ export interface AwesomeButtonProps {
   activityColor?: string;
   activeOpacity?: number;
   animatedPlaceholder?: boolean;
+  animateSize?: boolean;
   backgroundActive?: string;
   backgroundColor?: string;
   backgroundDarker?: string;
@@ -37,6 +38,7 @@ export interface AwesomeButtonProps {
   borderLeftBottomRadius?: number;
   borderWidth?: number;
   progressLoadingTime?: number;
+  showProgressBar?: boolean;
   extra?: ReactNode;
   disabled?: boolean;
   height?: number;

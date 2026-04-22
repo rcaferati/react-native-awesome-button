@@ -16,6 +16,7 @@ export type DemoThemeStackParamList = {
 
 export type DemoTabParamList = {
   'Themed Buttons': undefined;
+  'Sizing': undefined;
   'Progress': undefined;
   'Social': undefined;
 };
@@ -38,6 +39,11 @@ export type ThemeScreenRouteProp = RouteProp<
 export type ProgressScreenProps = BottomTabScreenProps<
   DemoTabParamList,
   'Progress'
+>;
+
+export type SizingScreenProps = BottomTabScreenProps<
+  DemoTabParamList,
+  'Sizing'
 >;
 
 export type SocialScreenProps = BottomTabScreenProps<

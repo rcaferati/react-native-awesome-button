@@ -167,7 +167,9 @@ describe('AwesomeButton textTransition', () => {
 
   it('does not animate on initial mount', () => {
     const component = createButton(
-      <AwesomeButton textTransition>Welcome</AwesomeButton>
+      <AwesomeButton textTransition width={200}>
+        Welcome
+      </AwesomeButton>
     );
 
     act(() => {
@@ -178,11 +180,17 @@ describe('AwesomeButton textTransition', () => {
   });
 
   it('animates on string text changes and expands longer targets before settling', () => {
-    const component = createButton(<AwesomeButton textTransition>Go#3</AwesomeButton>);
+    const component = createButton(
+      <AwesomeButton textTransition width={200}>
+        Go#3
+      </AwesomeButton>
+    );
 
     act(() => {
       component.update(
-        <AwesomeButton textTransition>Mission#42</AwesomeButton>
+        <AwesomeButton textTransition width={200}>
+          Mission#42
+        </AwesomeButton>
       );
     });
 
@@ -203,11 +211,17 @@ describe('AwesomeButton textTransition', () => {
 
   it('does not hard truncate shorter targets before the collapse phase finishes', () => {
     const component = createButton(
-      <AwesomeButton textTransition>Mission#42</AwesomeButton>
+      <AwesomeButton textTransition width={200}>
+        Mission#42
+      </AwesomeButton>
     );
 
     act(() => {
-      component.update(<AwesomeButton textTransition>Go#3</AwesomeButton>);
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Go#3
+        </AwesomeButton>
+      );
     });
 
     act(() => {
@@ -223,20 +237,26 @@ describe('AwesomeButton textTransition', () => {
     expect(getRenderedText(component)).toBe('Go#3');
   });
 
-  it('swaps immediately when textTransition is disabled or the text is unchanged', () => {
+  it('keeps unchanged labels stable and swaps non-transition labels only after the width phase they require', () => {
     const component = createButton(
-      <AwesomeButton textTransition>Welcome</AwesomeButton>
+      <AwesomeButton textTransition width={200}>
+        Welcome
+      </AwesomeButton>
     );
 
     act(() => {
-      component.update(<AwesomeButton textTransition>Welcome</AwesomeButton>);
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Welcome
+        </AwesomeButton>
+      );
       jest.advanceTimersByTime(80);
     });
 
     expect(getRenderedText(component)).toBe('Welcome');
 
     act(() => {
-      component.update(<AwesomeButton>Ready#3</AwesomeButton>);
+      component.update(<AwesomeButton width={200}>Ready#3</AwesomeButton>);
     });
 
     expect(getRenderedText(component)).toBe('Ready#3');
@@ -244,12 +264,14 @@ describe('AwesomeButton textTransition', () => {
 
   it('bypasses the effect for non-string children', () => {
     const component = createButton(
-      <AwesomeButton textTransition>Welcome</AwesomeButton>
+      <AwesomeButton textTransition width={200}>
+        Welcome
+      </AwesomeButton>
     );
 
     act(() => {
       component.update(
-        <AwesomeButton textTransition>
+        <AwesomeButton textTransition width={200}>
           <Text>Node label</Text>
         </AwesomeButton>
       );
@@ -264,11 +286,17 @@ describe('AwesomeButton textTransition', () => {
 
   it('cleans up timers on unmount', () => {
     const component = createButton(
-      <AwesomeButton textTransition>Welcome</AwesomeButton>
+      <AwesomeButton textTransition width={200}>
+        Welcome
+      </AwesomeButton>
     );
 
     act(() => {
-      component.update(<AwesomeButton textTransition>Level 2</AwesomeButton>);
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Level 2
+        </AwesomeButton>
+      );
     });
 
     expect(jest.getTimerCount()).toBeGreaterThan(0);
@@ -281,10 +309,18 @@ describe('AwesomeButton textTransition', () => {
   });
 
   it('interrupts an in-flight transition and restarts from the current rendered text', () => {
-    const component = createButton(<AwesomeButton textTransition>Go#3</AwesomeButton>);
+    const component = createButton(
+      <AwesomeButton textTransition width={200}>
+        Go#3
+      </AwesomeButton>
+    );
 
     act(() => {
-      component.update(<AwesomeButton textTransition>Mission#42</AwesomeButton>);
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Mission#42
+        </AwesomeButton>
+      );
     });
 
     act(() => {
@@ -294,7 +330,11 @@ describe('AwesomeButton textTransition', () => {
     const midTransitionText = getRenderedText(component);
 
     act(() => {
-      component.update(<AwesomeButton textTransition>Go#3</AwesomeButton>);
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Go#3
+        </AwesomeButton>
+      );
     });
 
     act(() => {

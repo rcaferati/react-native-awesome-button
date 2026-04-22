@@ -5,7 +5,14 @@ import type { DemoContainerProps } from '../types';
 export default function Container({ children }: DemoContainerProps) {
   return (
     <View style={style.container}>
-      <ScrollView contentContainerStyle={style.scrollView}>{children}</ScrollView>
+      <ScrollView
+        automaticallyAdjustContentInsets={false}
+        automaticallyAdjustKeyboardInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={style.scrollView}
+      >
+        {children}
+      </ScrollView>
     </View>
   );
 }

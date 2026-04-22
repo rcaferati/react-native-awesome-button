@@ -57,11 +57,10 @@ export default function Progress({ navigation }: ProgressScreenProps) {
           name={theme}
           style={styles.button}
           progress
+          showProgressBar={false}
           onPress={handleTimeout}
           type="primary"
           width={200}
-          backgroundActive="rgba(0,0,0,0)"
-          backgroundProgress="rgba(0,0,0,0)"
         >
           No Bar
         </ThemedButton>
