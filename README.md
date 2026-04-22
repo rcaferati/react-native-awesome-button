@@ -16,7 +16,7 @@ The library exports:
 
 Try the live package demo on [expo.dev](https://snack.expo.dev/@rcaferati/react-native-awesome-button).
 
-[<img src="https://caferati.dev/images/github/expo-snack.png" width="800" />](https://snack.expo.dev/@rcaferati/react-native-awesome-button)
+[<img src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/expo-demo.png" width="800" />](https://snack.expo.dev/@rcaferati/react-native-awesome-button)
 
 ## Figma File
 
