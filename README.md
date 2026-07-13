@@ -26,13 +26,33 @@ Import the button visuals directly into your [Figma](https://www.figma.com/file/
 
 ## Install
 ```bash
-npm install @rcaferati/react-native-awesome-button
+npm install @rcaferati/react-native-awesome-button react-native-reanimated react-native-worklets
 ```
 
 Current peer support:
 
-- `react >= 18.2.0`
-- `react-native >= 0.76.0`
+- `react *`
+- `react-native 0.81 - 0.85`
+- `react-native-reanimated >= 4.0.0 < 5.0.0`
+- `react-native-worklets >= 0.8.0 < 0.9.0`
+
+This release targets the React Native New Architecture.
+
+For Expo projects, install the native peers with Expo so versions stay aligned with your SDK:
+
+```bash
+npx expo install react-native-reanimated react-native-worklets
+npm install @rcaferati/react-native-awesome-button
+```
+
+Required app setup: add the Worklets Babel plugin last in your Babel config.
+
+```js
+module.exports = {
+  presets: ['module:@react-native/babel-preset'],
+  plugins: ['react-native-worklets/plugin'],
+};
+```
 
 ## Basic Usage
 
@@ -86,7 +106,9 @@ export function SizeExample({
 
 ## Progress Buttons
 
-When `progress` is enabled, `onPress` receives a `next` callback. Call it when your work is done to complete the progress animation and release the button.
+When `progress` is enabled, `onPress` receives a `next` callback. Call it when your work is done to complete the progress animation and release the button. `next` may also receive an optional callback that runs after completion and release finish.
+
+Set `showProgressBar={false}` to hide the traveling progress bar while keeping the activity indicator visible during loading.
 
 ```tsx
 import AwesomeButton from '@rcaferati/react-native-awesome-button';
@@ -267,7 +289,7 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `paddingBottom` | `number` | `0` | Additional bottom padding for the content row. |
 | `progress` | `boolean` | `false` | Enables the progress-button flow. `onPress` receives a `next` callback in this mode. |
 | `progressLoadingTime` | `number` | `3000` | Duration of the loading bar animation in progress mode. |
-| `showProgressBar` | `boolean` | `true` | Keeps the progress indicator visible while the button is in loading mode. |
+| `showProgressBar` | `boolean` | `true` | Hides only the traveling progress bar when set to `false`; the activity indicator still remains visible during loading. |
 | `raiseLevel` | `number` | `4` | Vertical raise distance used to render the 3D depth effect. |
 | `springRelease` | `boolean` | `true` | Uses spring-based release animation instead of timing-based release. |
 | `stretch` | `boolean` | `false` | Makes the button fill the available horizontal space. |
@@ -278,7 +300,7 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `textSize` | `number` | `14` | Default font size for string labels. |
 | `textTransition` | `boolean` | `false` | Enables the built-in scramble/reveal animation for plain string labels. In auto-width mode, wider labels grow first and narrower labels shrink last. |
 | `width` | `number \| 'auto' \| null` | `null` | Fixed width, measured auto width (`null` / `'auto'`), or pair with `stretch` for full width. Auto-width string labels can now both grow and shrink. |
-| `onPress` | `(next?) => void` | `() => undefined` | Main press callback. In `progress` mode it receives the completion handler. |
+| `onPress` | `(next?) => void` | `() => undefined` | Main press callback. In `progress` mode it receives the completion handler, and `next` may receive an optional callback to run after completion and release. |
 | `onLongPress` | `PressableProps['onLongPress']` | `undefined` | Native long-press callback forwarded to `Pressable`. |
 | `onPressIn` | `(event) => void` | `() => undefined` | Native press-in observer callback. |
 | `onPressOut` | `(event) => void` | `() => undefined` | Native press-out observer callback. |
@@ -324,7 +346,7 @@ The Expo demo resolves `@rcaferati/react-native-awesome-button` to the local `sr
 
 ## Demo
 
-The `demo/` app is an Expo SDK 52 compatibility harness for:
+The `demo/` app is an Expo SDK 55 compatibility harness for:
 
 - common themed buttons across all registered themes
 - progress buttons
@@ -339,6 +361,8 @@ The `demo/` app is an Expo SDK 52 compatibility harness for:
 - extra-content button compositions
 
 See [`demo/README.md`](./demo/README.md) for demo-specific instructions.
+
+The demo still includes `react-native-gesture-handler` because React Navigation depends on it, even though the library package itself no longer does.
 
 ## Author
 

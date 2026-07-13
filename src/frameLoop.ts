@@ -39,6 +39,33 @@ export const requestFrame = (
   };
 };
 
+const normalizeFutureFrames = (frames: number) => {
+  if (Number.isFinite(frames) !== true || frames <= 0) {
+    return 0;
+  }
+
+  return Math.floor(frames);
+};
+
+export const waitForFutureFrames = (frames: number): Promise<void> => {
+  const remainingFrames = normalizeFutureFrames(frames) + 1;
+
+  return new Promise((resolve) => {
+    const step = (remaining: number) => {
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+
+      requestFrame(() => {
+        step(remaining - 1);
+      });
+    };
+
+    step(remainingFrames);
+  });
+};
+
 export const cancelFrame = (handle: FrameHandle | null) => {
   if (!handle) {
     return;

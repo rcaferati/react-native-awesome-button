@@ -35,159 +35,261 @@ exports[`AwesomeButton should render 1`] = `
   testID="aws-btn-content-view"
 >
   <View
-    collapsable={false}
     style={
-      {
-        "backgroundColor": "transparent",
-        "height": 60,
-        "opacity": 0,
-        "width": undefined,
-        "zIndex": 10,
-      }
+      [
+        {
+          "backgroundColor": "transparent",
+          "zIndex": 10,
+        },
+        {
+          "height": 60,
+          "width": undefined,
+        },
+        {
+          "opacity": 0,
+        },
+        null,
+        undefined,
+      ]
     }
     testID="aws-btn-content-2"
   >
     <View
-      collapsable={false}
-      style={
-        {
-          "backgroundColor": "rgba(0, 0, 0, 0.15)",
-          "borderBottomLeftRadius": undefined,
-          "borderBottomRightRadius": undefined,
-          "borderRadius": 4,
-          "borderTopLeftRadius": undefined,
-          "borderTopRightRadius": undefined,
-          "bottom": -2,
-          "height": 56,
-          "left": "1%",
-          "position": "absolute",
-          "transform": [
-            {
-              "translateY": 0,
-            },
-          ],
-          "width": "98%",
-        }
-      }
-      testID="aws-btn-shadow"
-    />
-    <View
       style={
         [
           {
-            "bottom": 0,
-            "left": 0,
-            "position": "absolute",
+            "height": "100%",
+            "width": "100%",
           },
           {
-            "backgroundColor": "#9f9f9f",
-            "borderBottomLeftRadius": undefined,
-            "borderBottomRightRadius": undefined,
-            "borderRadius": 4,
-            "borderTopLeftRadius": undefined,
-            "borderTopRightRadius": undefined,
-            "height": 56,
-            "width": undefined,
+            "opacity": 1,
           },
-          null,
         ]
       }
-      testID="aws-btn-bottom"
-    />
-    <View
-      collapsable={false}
-      style={
-        {
-          "borderBottomLeftRadius": undefined,
-          "borderBottomRightRadius": undefined,
-          "borderRadius": 4,
-          "borderTopLeftRadius": undefined,
-          "borderTopRightRadius": undefined,
-          "height": 56,
-          "left": 0,
-          "position": "absolute",
-          "top": 0,
-          "transform": [
-            {
-              "translateY": 0,
-            },
-          ],
-          "width": undefined,
-        }
-      }
-      testID="aws-btn-content"
+      testID="aws-btn-pressed-opacity"
     >
       <View
-        onLayout={[Function]}
         style={
           [
             {
-              "alignItems": "center",
-              "flex": 1,
-              "justifyContent": "center",
-              "overflow": "hidden",
-              "zIndex": 3,
+              "left": "1%",
+              "position": "absolute",
+              "width": "98%",
             },
             {
-              "backgroundColor": "#c0c0c0",
-              "borderBottomLeftRadius": undefined,
-              "borderBottomRightRadius": undefined,
-              "borderColor": undefined,
-              "borderRadius": 4,
-              "borderTopLeftRadius": undefined,
-              "borderTopRightRadius": undefined,
-              "borderWidth": 0,
+              "bottom": -2,
+              "height": 56,
             },
+            null,
           ]
         }
-        testID="aws-btn-text"
+        testID="aws-btn-shadow"
       >
         <View
-          collapsable={false}
-          style={
-            {
-              "backgroundColor": "rgba(0, 0, 0, 0.15)",
-              "height": 56,
-              "left": 0,
-              "opacity": 0,
-              "position": "absolute",
-              "top": 0,
-              "width": undefined,
-            }
-          }
-          testID="aws-btn-active-background"
-        />
-        <View
-          onLayout={[Function]}
           style={
             [
               {
-                "overflow": "hidden",
-                "width": "55%",
+                "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                "borderBottomLeftRadius": undefined,
+                "borderBottomRightRadius": undefined,
+                "borderRadius": 4,
+                "borderTopLeftRadius": undefined,
+                "borderTopRightRadius": undefined,
+                "bottom": -2,
+                "height": 56,
+              },
+              {
+                "bottom": 0,
+                "height": "100%",
+                "left": 0,
+                "position": "absolute",
+                "right": 0,
+                "top": 0,
+                "width": "100%",
               },
               {
                 "backgroundColor": "rgba(0, 0, 0, 0.15)",
-                "height": 20,
+              },
+              {
+                "transform": [
+                  {
+                    "translateY": undefined,
+                  },
+                ],
               },
             ]
           }
-        >
-          <View
-            collapsable={false}
-            style={
+          testID="aws-btn-shadow-inner"
+        />
+      </View>
+      <View
+        style={
+          [
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+            },
+            {
+              "backgroundColor": "#9f9f9f",
+              "borderBottomLeftRadius": undefined,
+              "borderBottomRightRadius": undefined,
+              "borderRadius": 4,
+              "borderTopLeftRadius": undefined,
+              "borderTopRightRadius": undefined,
+              "height": 56,
+              "width": undefined,
+            },
+            {
+              "backgroundColor": "#9f9f9f",
+            },
+            null,
+          ]
+        }
+        testID="aws-btn-bottom"
+      />
+      <View
+        style={
+          [
+            {
+              "left": 0,
+              "position": "absolute",
+              "top": 0,
+            },
+            {
+              "borderBottomLeftRadius": undefined,
+              "borderBottomRightRadius": undefined,
+              "borderRadius": 4,
+              "borderTopLeftRadius": undefined,
+              "borderTopRightRadius": undefined,
+              "height": 56,
+              "width": undefined,
+            },
+            null,
+          ]
+        }
+        testID="aws-btn-content"
+      >
+        <View
+          style={
+            [
               {
-                "backgroundColor": "rgba(0, 0, 0, 0.15)",
-                "height": 20,
+                "height": "100%",
+                "width": "100%",
+              },
+              {
                 "transform": [
                   {
-                    "translateX": -0,
+                    "translateY": undefined,
                   },
                 ],
-                "width": "100%",
-              }
+              },
+            ]
+          }
+          testID="aws-btn-face-transform"
+        >
+          <View
+            onLayout={[Function]}
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "flex": 1,
+                  "justifyContent": "center",
+                  "overflow": "hidden",
+                  "zIndex": 3,
+                },
+                {
+                  "backgroundColor": "#c0c0c0",
+                  "borderBottomLeftRadius": undefined,
+                  "borderBottomRightRadius": undefined,
+                  "borderColor": undefined,
+                  "borderRadius": 4,
+                  "borderTopLeftRadius": undefined,
+                  "borderTopRightRadius": undefined,
+                  "borderWidth": 0,
+                },
+                {
+                  "backgroundColor": "#c0c0c0",
+                  "borderColor": undefined,
+                },
+              ]
             }
-            testID="aws-btn-content-placeholder"
-          />
+            testID="aws-btn-text"
+          >
+            <View
+              style={
+                [
+                  {
+                    "left": 0,
+                    "position": "absolute",
+                    "top": 0,
+                  },
+                  {
+                    "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                    "height": 56,
+                    "width": undefined,
+                  },
+                  {
+                    "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                  },
+                  {
+                    "opacity": 0,
+                  },
+                  null,
+                ]
+              }
+              testID="aws-btn-active-background"
+            />
+            <View
+              onLayout={[Function]}
+              style={
+                [
+                  {
+                    "overflow": "hidden",
+                    "width": "55%",
+                  },
+                  [
+                    {
+                      "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                      "height": 20,
+                    },
+                    {
+                      "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                    },
+                  ],
+                ]
+              }
+            >
+              <View
+                style={
+                  [
+                    {
+                      "backgroundColor": "rgba(0,0,0,0.15)",
+                      "width": "100%",
+                    },
+                    [
+                      {
+                        "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                        "height": 20,
+                      },
+                      {
+                        "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                      },
+                    ],
+                    {
+                      "transform": [
+                        {
+                          "translateX": undefined,
+                        },
+                      ],
+                    },
+                  ]
+                }
+                testID="aws-btn-content-placeholder"
+              />
+            </View>
+          </View>
         </View>
       </View>
     </View>
@@ -196,237 +298,356 @@ exports[`AwesomeButton should render 1`] = `
 `;
 
 exports[`AwesomeButton should render a default text children 1`] = `
-<View
-  accessibilityRole="button"
-  accessibilityState={
-    {
-      "busy": undefined,
-      "checked": undefined,
-      "disabled": undefined,
-      "expanded": undefined,
-      "selected": undefined,
-    }
-  }
-  accessibilityValue={
-    {
-      "max": undefined,
-      "min": undefined,
-      "now": undefined,
-      "text": undefined,
-    }
-  }
-  accessible={true}
-  collapsable={false}
-  focusable={true}
-  onBlur={[Function]}
-  onClick={[Function]}
-  onFocus={[Function]}
-  onResponderGrant={[Function]}
-  onResponderMove={[Function]}
-  onResponderRelease={[Function]}
-  onResponderTerminate={[Function]}
-  onResponderTerminationRequest={[Function]}
-  onStartShouldSetResponder={[Function]}
-  testID="aws-btn-content-view"
->
+[
   <View
-    collapsable={false}
-    style={
+    accessibilityRole="button"
+    accessibilityState={
       {
-        "backgroundColor": "transparent",
-        "height": 60,
-        "opacity": 0,
-        "width": undefined,
-        "zIndex": 10,
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
       }
     }
-    testID="aws-btn-content-2"
-  >
-    <View
-      collapsable={false}
-      style={
-        {
-          "backgroundColor": "rgba(0, 0, 0, 0.15)",
-          "borderBottomLeftRadius": undefined,
-          "borderBottomRightRadius": undefined,
-          "borderRadius": 4,
-          "borderTopLeftRadius": undefined,
-          "borderTopRightRadius": undefined,
-          "bottom": -2,
-          "height": 56,
-          "left": "1%",
-          "position": "absolute",
-          "transform": [
-            {
-              "translateY": 0,
-            },
-          ],
-          "width": "98%",
-        }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
       }
-      testID="aws-btn-shadow"
-    />
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    testID="aws-btn-content-view"
+  >
     <View
       style={
         [
           {
-            "bottom": 0,
-            "left": 0,
-            "position": "absolute",
+            "backgroundColor": "transparent",
+            "zIndex": 10,
           },
           {
-            "backgroundColor": "#9f9f9f",
-            "borderBottomLeftRadius": undefined,
-            "borderBottomRightRadius": undefined,
-            "borderRadius": 4,
-            "borderTopLeftRadius": undefined,
-            "borderTopRightRadius": undefined,
-            "height": 56,
+            "height": 60,
             "width": undefined,
           },
+          {
+            "opacity": 0,
+          },
           null,
+          undefined,
         ]
       }
-      testID="aws-btn-bottom"
-    />
-    <View
-      collapsable={false}
-      style={
-        {
-          "borderBottomLeftRadius": undefined,
-          "borderBottomRightRadius": undefined,
-          "borderRadius": 4,
-          "borderTopLeftRadius": undefined,
-          "borderTopRightRadius": undefined,
-          "height": 56,
-          "left": 0,
-          "position": "absolute",
-          "top": 0,
-          "transform": [
-            {
-              "translateY": 0,
-            },
-          ],
-          "width": undefined,
-        }
-      }
-      testID="aws-btn-content"
+      testID="aws-btn-content-2"
     >
       <View
-        onLayout={[Function]}
         style={
           [
             {
-              "alignItems": "center",
-              "flex": 1,
-              "justifyContent": "center",
-              "overflow": "hidden",
-              "zIndex": 3,
+              "height": "100%",
+              "width": "100%",
             },
             {
-              "backgroundColor": "#c0c0c0",
-              "borderBottomLeftRadius": undefined,
-              "borderBottomRightRadius": undefined,
-              "borderColor": undefined,
-              "borderRadius": 4,
-              "borderTopLeftRadius": undefined,
-              "borderTopRightRadius": undefined,
-              "borderWidth": 0,
+              "opacity": 1,
             },
           ]
         }
-        testID="aws-btn-text"
+        testID="aws-btn-pressed-opacity"
       >
         <View
-          collapsable={false}
           style={
-            {
-              "backgroundColor": "rgba(0, 0, 0, 0.15)",
-              "height": 56,
-              "left": 0,
-              "opacity": 0,
-              "position": "absolute",
-              "top": 0,
-              "width": undefined,
-            }
+            [
+              {
+                "left": "1%",
+                "position": "absolute",
+                "width": "98%",
+              },
+              {
+                "bottom": -2,
+                "height": 56,
+              },
+              null,
+            ]
           }
-          testID="aws-btn-active-background"
-        />
-        <View
-          collapsable={false}
-          style={
-            {
-              "alignItems": "center",
-              "flex": 1,
-              "flexDirection": "row",
-              "justifyContent": "center",
-              "opacity": 1,
-              "paddingBottom": 0,
-              "paddingHorizontal": 16,
-              "paddingTop": 0,
-              "transform": [
-                {
-                  "scale": 1,
-                },
-              ],
-            }
-          }
+          testID="aws-btn-shadow"
         >
-          <Text
+          <View
             style={
               [
                 {
-                  "fontWeight": "bold",
-                  "textAlign": "center",
-                  "zIndex": 10,
+                  "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                  "borderBottomLeftRadius": undefined,
+                  "borderBottomRightRadius": undefined,
+                  "borderRadius": 4,
+                  "borderTopLeftRadius": undefined,
+                  "borderTopRightRadius": undefined,
+                  "bottom": -2,
+                  "height": 56,
                 },
                 {
-                  "color": "#FFFFFF",
-                  "fontFamily": undefined,
-                  "fontSize": 14,
+                  "bottom": 0,
+                  "height": "100%",
+                  "left": 0,
+                  "position": "absolute",
+                  "right": 0,
+                  "top": 0,
+                  "width": "100%",
+                },
+                {
+                  "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                },
+                {
+                  "transform": [
+                    {
+                      "translateY": undefined,
+                    },
+                  ],
                 },
               ]
             }
-            testID="aws-btn-content-text"
+            testID="aws-btn-shadow-inner"
+          />
+        </View>
+        <View
+          style={
+            [
+              {
+                "bottom": 0,
+                "left": 0,
+                "position": "absolute",
+              },
+              {
+                "backgroundColor": "#9f9f9f",
+                "borderBottomLeftRadius": undefined,
+                "borderBottomRightRadius": undefined,
+                "borderRadius": 4,
+                "borderTopLeftRadius": undefined,
+                "borderTopRightRadius": undefined,
+                "height": 56,
+                "width": undefined,
+              },
+              {
+                "backgroundColor": "#9f9f9f",
+              },
+              null,
+            ]
+          }
+          testID="aws-btn-bottom"
+        />
+        <View
+          style={
+            [
+              {
+                "left": 0,
+                "position": "absolute",
+                "top": 0,
+              },
+              {
+                "borderBottomLeftRadius": undefined,
+                "borderBottomRightRadius": undefined,
+                "borderRadius": 4,
+                "borderTopLeftRadius": undefined,
+                "borderTopRightRadius": undefined,
+                "height": 56,
+                "width": undefined,
+              },
+              null,
+            ]
+          }
+          testID="aws-btn-content"
+        >
+          <View
+            style={
+              [
+                {
+                  "height": "100%",
+                  "width": "100%",
+                },
+                {
+                  "transform": [
+                    {
+                      "translateY": undefined,
+                    },
+                  ],
+                },
+              ]
+            }
+            testID="aws-btn-face-transform"
           >
-            Default
-          </Text>
+            <View
+              onLayout={[Function]}
+              style={
+                [
+                  {
+                    "alignItems": "center",
+                    "flex": 1,
+                    "justifyContent": "center",
+                    "overflow": "hidden",
+                    "zIndex": 3,
+                  },
+                  {
+                    "backgroundColor": "#c0c0c0",
+                    "borderBottomLeftRadius": undefined,
+                    "borderBottomRightRadius": undefined,
+                    "borderColor": undefined,
+                    "borderRadius": 4,
+                    "borderTopLeftRadius": undefined,
+                    "borderTopRightRadius": undefined,
+                    "borderWidth": 0,
+                  },
+                  {
+                    "backgroundColor": "#c0c0c0",
+                    "borderColor": undefined,
+                  },
+                ]
+              }
+              testID="aws-btn-text"
+            >
+              <View
+                style={
+                  [
+                    {
+                      "left": 0,
+                      "position": "absolute",
+                      "top": 0,
+                    },
+                    {
+                      "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                      "height": 56,
+                      "width": undefined,
+                    },
+                    {
+                      "backgroundColor": "rgba(0, 0, 0, 0.15)",
+                    },
+                    {
+                      "opacity": 0,
+                    },
+                    null,
+                  ]
+                }
+                testID="aws-btn-active-background"
+              />
+              <View
+                style={
+                  [
+                    {
+                      "alignItems": "center",
+                      "flex": 1,
+                      "flexDirection": "row",
+                      "justifyContent": "center",
+                    },
+                    {
+                      "paddingBottom": 0,
+                      "paddingHorizontal": 16,
+                      "paddingTop": 0,
+                    },
+                    {
+                      "opacity": 1,
+                      "transform": [
+                        {
+                          "scale": 1,
+                        },
+                      ],
+                      "transitionDuration": 300,
+                      "transitionProperty": [
+                        "opacity",
+                        "transform",
+                      ],
+                      "transitionTimingFunction": "ease-out",
+                    },
+                  ]
+                }
+              >
+                <Text
+                  style={
+                    [
+                      {
+                        "fontWeight": "bold",
+                        "textAlign": "center",
+                        "zIndex": 10,
+                      },
+                      {
+                        "color": "#FFFFFF",
+                        "fontFamily": undefined,
+                        "fontSize": 14,
+                      },
+                    ]
+                  }
+                  testID="aws-btn-content-text"
+                >
+                  Default
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
       </View>
     </View>
+  </View>,
+  <Modal
+    animationType="none"
+    onRequestClose={[Function]}
+    transparent={true}
+    visible={true}
+  >
     <View
-      onLayout={[Function]}
       pointerEvents="none"
-      style={
-        {
-          "alignSelf": "flex-start",
-          "borderWidth": 0,
-          "flexDirection": "row",
-          "opacity": 0,
-          "paddingBottom": 0,
-          "paddingHorizontal": 16,
-          "paddingTop": 0,
-          "position": "absolute",
-        }
-      }
-      testID="aws-btn-hidden-measure"
+      testID="aws-btn-hidden-measure-host"
     >
-      <Text
+      <View
+        onLayout={[Function]}
+        pointerEvents="none"
         style={
-          {
-            "color": "#FFFFFF",
-            "fontFamily": undefined,
-            "fontSize": 14,
-            "fontWeight": "bold",
-            "lineHeight": 20,
-            "textAlign": "center",
-          }
+          [
+            {
+              "alignSelf": "flex-start",
+              "borderWidth": 0,
+              "flexDirection": "row",
+              "opacity": 0,
+              "paddingBottom": 0,
+              "paddingHorizontal": 16,
+              "paddingTop": 0,
+            },
+            {
+              "left": -10000,
+              "position": "absolute",
+              "top": 0,
+            },
+          ]
         }
-        testID="aws-btn-hidden-measure-text"
+        testID="aws-btn-hidden-measure"
       >
-        Default
-      </Text>
+        <Text
+          ellipsizeMode="clip"
+          numberOfLines={1}
+          style={
+            {
+              "color": "#FFFFFF",
+              "fontFamily": undefined,
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "lineHeight": 20,
+              "textAlign": "center",
+            }
+          }
+          testID="aws-btn-hidden-measure-text"
+        >
+          Default
+        </Text>
+      </View>
     </View>
-  </View>
-</View>
+  </Modal>,
+]
 `;

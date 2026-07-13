@@ -40,7 +40,7 @@ export default function Progress({ navigation }: ProgressScreenProps) {
           type="primary"
           width={200}
         >
-          Progress
+          Default
         </ThemedButton>
         <ThemedButton
           name={theme}
@@ -51,7 +51,7 @@ export default function Progress({ navigation }: ProgressScreenProps) {
           width={200}
           progressLoadingTime={6000}
         >
-          Slower
+          Longer Load
         </ThemedButton>
         <ThemedButton
           name={theme}
@@ -62,7 +62,7 @@ export default function Progress({ navigation }: ProgressScreenProps) {
           type="primary"
           width={200}
         >
-          No Bar
+          Spinner Only
         </ThemedButton>
         <ThemedButton
           name={theme}
@@ -74,8 +74,10 @@ export default function Progress({ navigation }: ProgressScreenProps) {
           borderRadius={0}
           width={200}
         >
-          Flat Progress
+          Flat
         </ThemedButton>
+      </Section>
+      <Section title="Icon Buttons">
         <ThemedButton
           name={theme}
           style={styles.button}

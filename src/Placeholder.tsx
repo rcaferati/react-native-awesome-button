@@ -1,23 +1,26 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  LayoutChangeEvent,
-  StyleProp,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { LayoutChangeEvent, StyleProp, ViewStyle } from 'react-native';
+import Animated, {
+  type AnimatedStyle,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { animateLoop } from './helpers';
 import { styles } from './styles';
 
 type PlaceholderProps = {
   animated?: boolean;
-  style?: StyleProp<ViewStyle>;
+  style?:
+    | StyleProp<ViewStyle>
+    | AnimatedStyle<ViewStyle>
+    | ReadonlyArray<StyleProp<ViewStyle> | AnimatedStyle<ViewStyle>>;
 };
 
 const Placeholder = ({ animated = false, style }: PlaceholderProps) => {
-  const loopAnimation = useRef<Animated.CompositeAnimation | null>(null);
+  const loopAnimation = useRef<ReturnType<typeof animateLoop> | null>(null);
   const [width, setWidth] = useState(0);
-  const animatedValue = useRef(new Animated.Value(0)).current;
+  const animatedValue = useSharedValue(0);
 
   const stopLoop = useCallback(() => {
     if (loopAnimation.current) {
@@ -25,8 +28,7 @@ const Placeholder = ({ animated = false, style }: PlaceholderProps) => {
       loopAnimation.current = null;
     }
 
-    animatedValue.stopAnimation();
-    animatedValue.setValue(0);
+    animatedValue.value = 0;
   }, [animatedValue]);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ const Placeholder = ({ animated = false, style }: PlaceholderProps) => {
         variable: animatedValue,
         toValue: 1,
       });
+      loopAnimation.current.start?.();
     }
 
     return stopLoop;
@@ -50,37 +53,33 @@ const Placeholder = ({ animated = false, style }: PlaceholderProps) => {
     );
   }, []);
 
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      transform: [
+        {
+          translateX: interpolate(
+            animatedValue.value,
+            [0, 0.2, 0.5, 0.7, 1],
+            [width * -1, width * -1, width, width, width * -1]
+          ),
+        },
+      ],
+    }),
+    [width]
+  );
+
   return (
-    <View
+    <Animated.View
       style={[styles.container__placeholder, style]}
       onLayout={handleLayout}
     >
       {animated === true && (
         <Animated.View
           testID="aws-btn-content-placeholder"
-          style={[
-            styles.container__placeholder__bar,
-            style,
-            {
-              transform: [
-                {
-                  translateX: animatedValue.interpolate({
-                    inputRange: [0, 0.2, 0.5, 0.7, 1],
-                    outputRange: [
-                      width * -1,
-                      width * -1,
-                      width,
-                      width,
-                      width * -1,
-                    ],
-                  }),
-                },
-              ],
-            },
-          ]}
+          style={[styles.container__placeholder__bar, style, animatedStyle]}
         />
       )}
-    </View>
+    </Animated.View>
   );
 };
 

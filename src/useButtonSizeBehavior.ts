@@ -1,19 +1,34 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
 import {
-  Animated,
-  Easing,
   type LayoutChangeEvent,
   type StyleProp,
-  type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import {
+  type AnimatedStyle,
+  Easing,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import {
+  getAutoWidthMeasurementSignature,
+  requestAutoWidthMeasurement,
+} from './autoWidthMeasurement';
+import {
+  animateParallel,
+  animateTiming,
+  setAnimatedValue,
+  type ReanimatedAnimationHandle,
+} from './helpers';
 import { runTextTransition } from './textTransition';
 import type { ButtonWidth } from './types';
 
@@ -28,18 +43,13 @@ type HeightDimensions = {
   shadow: number;
 };
 
-type HiddenMeasurementRequest = {
-  id: number;
-  text: string;
-};
-
 type SizeAnimatedStyles = {
-  container: StyleProp<ViewStyle> | null;
-  shadow: StyleProp<ViewStyle> | null;
-  bottom: StyleProp<ViewStyle> | null;
-  progress: StyleProp<ViewStyle> | null;
-  content: StyleProp<ViewStyle> | null;
-  activeBackground: StyleProp<ViewStyle> | null;
+  container: StyleProp<ViewStyle> | AnimatedStyle<ViewStyle> | null;
+  shadow: StyleProp<ViewStyle> | AnimatedStyle<ViewStyle> | null;
+  bottom: StyleProp<ViewStyle> | AnimatedStyle<ViewStyle> | null;
+  progress: StyleProp<ViewStyle> | AnimatedStyle<ViewStyle> | null;
+  content: StyleProp<ViewStyle> | AnimatedStyle<ViewStyle> | null;
+  activeBackground: StyleProp<ViewStyle> | AnimatedStyle<ViewStyle> | null;
 };
 
 const isNonEmptyString = (value: ReactNode): value is string =>
@@ -97,27 +107,32 @@ export const getAutoWidthTextFlow = (
 
 type UseButtonSizeBehaviorParams = {
   animateSize?: boolean;
-  animatedOpacity: Animated.Value;
+  animatedOpacity: SharedValue<number>;
   after?: ReactNode;
   before?: ReactNode;
+  borderWidth: number;
   children: ReactNode;
   extra?: ReactNode;
   height: number;
   paddingBottom: number;
+  paddingHorizontal: number;
   paddingTop: number;
   raiseLevel: number;
   stretch?: boolean;
+  textColor?: string;
+  textFontFamily?: string;
+  textLineHeight?: number;
+  textSize?: number;
   textTransition?: boolean;
   width: ButtonWidth;
 };
 
 type UseButtonSizeBehaviorResult = {
   displayedText: string | null;
-  hiddenMeasurementKey: string | null;
-  hiddenMeasurementText: string | null;
-  onHiddenMeasurementLayout: (event: LayoutChangeEvent) => void;
+  measurementHostEnabled: boolean;
   onVisibleContentLayout: (event: LayoutChangeEvent) => void;
   resolvedWidth: number | null;
+  resolvedHeightDimensions: HeightDimensions;
   sizeAnimatedStyles: SizeAnimatedStyles;
 };
 
@@ -126,13 +141,19 @@ const useButtonSizeBehavior = ({
   animatedOpacity,
   after = null,
   before = null,
+  borderWidth,
   children,
   extra = null,
   height,
   paddingBottom,
+  paddingHorizontal,
   paddingTop,
   raiseLevel,
   stretch,
+  textColor,
+  textFontFamily,
+  textLineHeight,
+  textSize,
   textTransition = false,
   width,
 }: UseButtonSizeBehaviorParams): UseButtonSizeBehaviorResult => {
@@ -144,21 +165,16 @@ const useButtonSizeBehavior = ({
     before === null &&
     after === null &&
     extra === null;
-  const initialHiddenMeasurementRequest =
-    canChoreographAutoWidthText && stringChildren !== null
-      ? {
-          id: 0,
-          text: stringChildren,
-        }
-      : null;
   const [displayedText, setDisplayedText] = useState<string | null>(
     stringChildren
   );
-  const [stateWidth, setStateWidth] = useState<number | null>(
+  const [resolvedWidth, setResolvedWidth] = useState<number | null>(
     widthMode === 'fixed' && typeof width === 'number' ? width : null
   );
-  const [hiddenMeasurementRequest, setHiddenMeasurementRequest] =
-    useState<HiddenMeasurementRequest | null>(initialHiddenMeasurementRequest);
+  const [resolvedHeightDimensions, setResolvedHeightDimensions] =
+    useState<HeightDimensions>(
+      getHeightDimensions(height, paddingTop, paddingBottom, raiseLevel)
+    );
   const displayedTextRef = useRef<string | null>(stringChildren);
   const currentTargetTextRef = useRef<string | null>(stringChildren);
   const widthModeRef = useRef<WidthMode>(widthMode);
@@ -171,34 +187,30 @@ const useButtonSizeBehavior = ({
   const textTransitionControllerRef = useRef<{
     stop: () => void;
   } | null>(null);
-  const widthAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
-  const heightAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const widthAnimationRef = useRef<ReanimatedAnimationHandle | null>(null);
+  const heightAnimationRef = useRef<ReanimatedAnimationHandle | null>(null);
   const widthAnimationTokenRef = useRef(0);
   const heightAnimationTokenRef = useRef(0);
-  const hiddenMeasurementRequestRef = useRef<HiddenMeasurementRequest | null>(
-    initialHiddenMeasurementRequest
-  );
   const textRunIdRef = useRef(0);
   const didInitializeTextRef = useRef(false);
   const didInitializeSizeRef = useRef(false);
+  const isMountedRef = useRef(true);
   const isWidthAnimatingRef = useRef(false);
   const isHeightAnimatingRef = useRef(false);
   const [isWidthAnimating, setIsWidthAnimating] = useState(false);
   const [isHeightAnimating, setIsHeightAnimating] = useState(false);
-  const animatedWidth = useRef(
-    new Animated.Value(
-      widthMode === 'fixed' && typeof width === 'number' ? width : 0
-    )
-  ).current;
-  const animatedContainerHeight = useRef(
-    new Animated.Value(currentHeightDimensionsRef.current.container)
-  ).current;
-  const animatedFaceHeight = useRef(
-    new Animated.Value(currentHeightDimensionsRef.current.face)
-  ).current;
-  const animatedShadowHeight = useRef(
-    new Animated.Value(currentHeightDimensionsRef.current.shadow)
-  ).current;
+  const animatedWidth = useSharedValue(
+    widthMode === 'fixed' && typeof width === 'number' ? width : 0
+  );
+  const animatedContainerHeight = useSharedValue(
+    currentHeightDimensionsRef.current.container
+  );
+  const animatedFaceHeight = useSharedValue(
+    currentHeightDimensionsRef.current.face
+  );
+  const animatedShadowHeight = useSharedValue(
+    currentHeightDimensionsRef.current.shadow
+  );
 
   const setWidthAnimatingFlag = useCallback((value: boolean) => {
     isWidthAnimatingRef.current = value;
@@ -224,14 +236,18 @@ const useButtonSizeBehavior = ({
     }
   }, []);
 
-  const syncStateWidth = useCallback((value: number | null) => {
+  const syncResolvedWidth = useCallback((value: number | null) => {
     currentWidthValueRef.current = value;
+    setResolvedWidth((currentValue) =>
+      currentValue === value ? currentValue : value
+    );
+  }, []);
 
-    if (widthModeRef.current === 'auto') {
-      setStateWidth((currentValue) =>
-        currentValue === value ? currentValue : value
-      );
-    }
+  const syncResolvedHeight = useCallback((value: HeightDimensions) => {
+    currentHeightDimensionsRef.current = value;
+    setResolvedHeightDimensions((currentValue) =>
+      areHeightDimensionsEqual(currentValue, value) ? currentValue : value
+    );
   }, []);
 
   const snapshotWidthAnimation = useCallback(
@@ -241,18 +257,18 @@ const useButtonSizeBehavior = ({
         return;
       }
 
-      animatedWidth.stopAnimation((value) => {
-        widthAnimationRef.current?.stop();
-        widthAnimationRef.current = null;
-        setWidthAnimatingFlag(false);
-        const resolvedValue =
-          typeof value === 'number' ? value : currentWidthValueRef.current;
+      widthAnimationRef.current?.stop();
+      widthAnimationRef.current = null;
+      setWidthAnimatingFlag(false);
+      const resolvedValue =
+        typeof animatedWidth.value === 'number'
+          ? animatedWidth.value
+          : currentWidthValueRef.current;
 
-        syncStateWidth(resolvedValue);
-        callback(resolvedValue);
-      });
+      syncResolvedWidth(resolvedValue);
+      callback(resolvedValue);
     },
-    [animatedWidth, setWidthAnimatingFlag, syncStateWidth]
+    [animatedWidth, setWidthAnimatingFlag, syncResolvedWidth]
   );
 
   const setWidthImmediately = useCallback(
@@ -262,13 +278,11 @@ const useButtonSizeBehavior = ({
       widthAnimationRef.current = null;
       setWidthAnimatingFlag(false);
 
-      if (nextWidth !== null) {
-        animatedWidth.setValue(nextWidth);
-      }
+      setAnimatedValue(animatedWidth, nextWidth ?? 0);
 
-      syncStateWidth(nextWidth);
+      syncResolvedWidth(nextWidth);
     },
-    [animatedWidth, setWidthAnimatingFlag, syncStateWidth]
+    [animatedWidth, setWidthAnimatingFlag, syncResolvedWidth]
   );
 
   const animateWidthTo = useCallback(
@@ -293,15 +307,14 @@ const useButtonSizeBehavior = ({
         widthAnimationTokenRef.current += 1;
         const animationToken = widthAnimationTokenRef.current;
 
-        animatedWidth.setValue(snapshotWidth);
-        syncStateWidth(nextWidth);
+        setAnimatedValue(animatedWidth, snapshotWidth);
         setWidthAnimatingFlag(true);
 
-        const animation = Animated.timing(animatedWidth, {
+        const animation = animateTiming({
+          variable: animatedWidth,
           duration: SIZE_ANIMATION_DURATION,
           easing: SIZE_ANIMATION_EASING,
           toValue: nextWidth,
-          useNativeDriver: false,
         });
 
         widthAnimationRef.current = animation;
@@ -315,7 +328,7 @@ const useButtonSizeBehavior = ({
 
           widthAnimationRef.current = null;
           setWidthAnimatingFlag(false);
-          syncStateWidth(nextWidth);
+          syncResolvedWidth(nextWidth);
           onComplete?.();
         });
       });
@@ -326,7 +339,7 @@ const useButtonSizeBehavior = ({
       setWidthAnimatingFlag,
       setWidthImmediately,
       snapshotWidthAnimation,
-      syncStateWidth,
+      syncResolvedWidth,
     ]
   );
 
@@ -337,38 +350,34 @@ const useButtonSizeBehavior = ({
         return;
       }
 
-      animatedContainerHeight.stopAnimation((containerValue) => {
-        animatedFaceHeight.stopAnimation((faceValue) => {
-          animatedShadowHeight.stopAnimation((shadowValue) => {
-            heightAnimationRef.current?.stop();
-            heightAnimationRef.current = null;
-            setHeightAnimatingFlag(false);
+      heightAnimationRef.current?.stop();
+      heightAnimationRef.current = null;
+      setHeightAnimatingFlag(false);
 
-            const nextSnapshot = {
-              container:
-                typeof containerValue === 'number'
-                  ? containerValue
-                  : currentHeightDimensionsRef.current.container,
-              face:
-                typeof faceValue === 'number'
-                  ? faceValue
-                  : currentHeightDimensionsRef.current.face,
-              shadow:
-                typeof shadowValue === 'number'
-                  ? shadowValue
-                  : currentHeightDimensionsRef.current.shadow,
-            };
+      const nextSnapshot = {
+        container:
+          typeof animatedContainerHeight.value === 'number'
+            ? animatedContainerHeight.value
+            : currentHeightDimensionsRef.current.container,
+        face:
+          typeof animatedFaceHeight.value === 'number'
+            ? animatedFaceHeight.value
+            : currentHeightDimensionsRef.current.face,
+        shadow:
+          typeof animatedShadowHeight.value === 'number'
+            ? animatedShadowHeight.value
+            : currentHeightDimensionsRef.current.shadow,
+      };
 
-            callback(nextSnapshot);
-          });
-        });
-      });
+      syncResolvedHeight(nextSnapshot);
+      callback(nextSnapshot);
     },
     [
       animatedContainerHeight,
       animatedFaceHeight,
       animatedShadowHeight,
       setHeightAnimatingFlag,
+      syncResolvedHeight,
     ]
   );
 
@@ -378,16 +387,17 @@ const useButtonSizeBehavior = ({
       heightAnimationRef.current?.stop();
       heightAnimationRef.current = null;
       setHeightAnimatingFlag(false);
-      currentHeightDimensionsRef.current = nextDimensions;
-      animatedContainerHeight.setValue(nextDimensions.container);
-      animatedFaceHeight.setValue(nextDimensions.face);
-      animatedShadowHeight.setValue(nextDimensions.shadow);
+      syncResolvedHeight(nextDimensions);
+      setAnimatedValue(animatedContainerHeight, nextDimensions.container);
+      setAnimatedValue(animatedFaceHeight, nextDimensions.face);
+      setAnimatedValue(animatedShadowHeight, nextDimensions.shadow);
     },
     [
       animatedContainerHeight,
       animatedFaceHeight,
       animatedShadowHeight,
       setHeightAnimatingFlag,
+      syncResolvedHeight,
     ]
   );
 
@@ -412,30 +422,29 @@ const useButtonSizeBehavior = ({
 
         heightAnimationTokenRef.current += 1;
         const animationToken = heightAnimationTokenRef.current;
-        currentHeightDimensionsRef.current = nextDimensions;
-        animatedContainerHeight.setValue(snapshot.container);
-        animatedFaceHeight.setValue(snapshot.face);
-        animatedShadowHeight.setValue(snapshot.shadow);
+        setAnimatedValue(animatedContainerHeight, snapshot.container);
+        setAnimatedValue(animatedFaceHeight, snapshot.face);
+        setAnimatedValue(animatedShadowHeight, snapshot.shadow);
         setHeightAnimatingFlag(true);
 
-        const animation = Animated.parallel([
-          Animated.timing(animatedContainerHeight, {
+        const animation = animateParallel([
+          animateTiming({
+            variable: animatedContainerHeight,
             duration: SIZE_ANIMATION_DURATION,
             easing: SIZE_ANIMATION_EASING,
             toValue: nextDimensions.container,
-            useNativeDriver: false,
           }),
-          Animated.timing(animatedFaceHeight, {
+          animateTiming({
+            variable: animatedFaceHeight,
             duration: SIZE_ANIMATION_DURATION,
             easing: SIZE_ANIMATION_EASING,
             toValue: nextDimensions.face,
-            useNativeDriver: false,
           }),
-          Animated.timing(animatedShadowHeight, {
+          animateTiming({
+            variable: animatedShadowHeight,
             duration: SIZE_ANIMATION_DURATION,
             easing: SIZE_ANIMATION_EASING,
             toValue: nextDimensions.shadow,
-            useNativeDriver: false,
           }),
         ]);
 
@@ -450,7 +459,7 @@ const useButtonSizeBehavior = ({
 
           heightAnimationRef.current = null;
           setHeightAnimatingFlag(false);
-          currentHeightDimensionsRef.current = nextDimensions;
+          syncResolvedHeight(nextDimensions);
         });
       });
     },
@@ -462,6 +471,7 @@ const useButtonSizeBehavior = ({
       setHeightAnimatingFlag,
       setHeightImmediately,
       snapshotHeightAnimation,
+      syncResolvedHeight,
     ]
   );
 
@@ -501,74 +511,55 @@ const useButtonSizeBehavior = ({
     [stopTextTransition, syncDisplayedText, textTransition]
   );
 
-  const requestHiddenMeasurement = useCallback((text: string) => {
-    const nextRequest = {
-      id: textRunIdRef.current,
-      text,
-    };
-
-    hiddenMeasurementRequestRef.current = nextRequest;
-    setHiddenMeasurementRequest((currentValue) => {
-      if (
-        currentValue !== null &&
-        currentValue.id === nextRequest.id &&
-        currentValue.text === nextRequest.text
-      ) {
-        return currentValue;
-      }
-
-      return nextRequest;
-    });
-  }, []);
-
-  const onHiddenMeasurementLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      const request = hiddenMeasurementRequestRef.current;
-
-      if (request === null) {
-        return;
-      }
-
-      hiddenMeasurementRequestRef.current = null;
-      setHiddenMeasurementRequest(null);
-
-      const nextWidth = event.nativeEvent.layout.width;
+  const resolveMeasuredTextWidth = useCallback(
+    (requestId: number, targetText: string, nextWidth: number) => {
       const flow = getAutoWidthTextFlow(
         currentWidthValueRef.current,
         nextWidth
       );
-      const requestId = request.id;
 
-      if (textRunIdRef.current !== requestId) {
+      if (isMountedRef.current !== true || textRunIdRef.current !== requestId) {
         return;
       }
 
-      animatedOpacity.setValue(1);
+      setAnimatedValue(animatedOpacity, 1);
 
       if (flow === 'initial') {
         setWidthImmediately(nextWidth);
-        syncDisplayedText(request.text);
+        syncDisplayedText(targetText);
         return;
       }
 
       if (flow === 'text-only') {
-        runTextPhase(requestId, request.text);
+        runTextPhase(requestId, targetText);
         return;
       }
 
       if (flow === 'grow-first') {
+        if (textTransition === true) {
+          animateWidthTo(nextWidth);
+          runTextPhase(requestId, targetText);
+          return;
+        }
+
         animateWidthTo(nextWidth, () => {
-          if (textRunIdRef.current !== requestId) {
+          if (
+            isMountedRef.current !== true ||
+            textRunIdRef.current !== requestId
+          ) {
             return;
           }
 
-          runTextPhase(requestId, request.text);
+          runTextPhase(requestId, targetText);
         });
         return;
       }
 
-      runTextPhase(requestId, request.text, () => {
-        if (textRunIdRef.current !== requestId) {
+      runTextPhase(requestId, targetText, () => {
+        if (
+          isMountedRef.current !== true ||
+          textRunIdRef.current !== requestId
+        ) {
           return;
         }
 
@@ -581,6 +572,43 @@ const useButtonSizeBehavior = ({
       runTextPhase,
       setWidthImmediately,
       syncDisplayedText,
+      textTransition,
+    ]
+  );
+
+  const requestMeasuredTextWidth = useCallback(
+    (requestId: number, targetText: string) => {
+      requestAutoWidthMeasurement({
+        borderWidth,
+        paddingBottom,
+        paddingHorizontal,
+        paddingTop,
+        signature: getAutoWidthMeasurementSignature({
+          borderWidth,
+          paddingHorizontal,
+          text: targetText,
+          textFontFamily,
+          textSize,
+        }),
+        text: targetText,
+        textColor,
+        textFontFamily,
+        textLineHeight,
+        textSize,
+      }).then((measuredWidth) => {
+        resolveMeasuredTextWidth(requestId, targetText, measuredWidth);
+      });
+    },
+    [
+      borderWidth,
+      paddingBottom,
+      paddingHorizontal,
+      paddingTop,
+      resolveMeasuredTextWidth,
+      textColor,
+      textFontFamily,
+      textLineHeight,
+      textSize,
     ]
   );
 
@@ -595,7 +623,7 @@ const useButtonSizeBehavior = ({
 
       const nextWidth = event.nativeEvent.layout.width;
 
-      animatedOpacity.setValue(1);
+      setAnimatedValue(animatedOpacity, 1);
 
       if (currentWidthValueRef.current === null || animateSize !== true) {
         setWidthImmediately(nextWidth);
@@ -613,7 +641,7 @@ const useButtonSizeBehavior = ({
     ]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const nextHeightDimensions = getHeightDimensions(
       height,
       paddingTop,
@@ -626,7 +654,6 @@ const useButtonSizeBehavior = ({
 
     if (didInitializeSizeRef.current !== true) {
       didInitializeSizeRef.current = true;
-      currentHeightDimensionsRef.current = nextHeightDimensions;
       setHeightImmediately(nextHeightDimensions);
 
       if (widthMode === 'fixed' && typeof width === 'number') {
@@ -644,13 +671,13 @@ const useButtonSizeBehavior = ({
       setHeightImmediately(nextHeightDimensions);
 
       if (widthMode === 'fixed' && typeof width === 'number') {
-        animatedOpacity.setValue(1);
+        setAnimatedValue(animatedOpacity, 1);
         setWidthImmediately(width);
       } else if (widthMode === 'stretch') {
-        animatedOpacity.setValue(1);
+        setAnimatedValue(animatedOpacity, 1);
         setWidthImmediately(null);
       } else {
-        animatedOpacity.setValue(0);
+        setAnimatedValue(animatedOpacity, 0);
         setWidthImmediately(null);
       }
 
@@ -688,7 +715,7 @@ const useButtonSizeBehavior = ({
       syncDisplayedText(nextText);
 
       if (canChoreographAutoWidthText === true && nextText !== null) {
-        requestHiddenMeasurement(nextText);
+        requestMeasuredTextWidth(nextRunId, nextText);
       }
 
       return;
@@ -704,17 +731,15 @@ const useButtonSizeBehavior = ({
 
     if (canChoreographAutoWidthText === true && nextText !== null) {
       snapshotWidthAnimation(() => {
-        requestHiddenMeasurement(nextText);
+        requestMeasuredTextWidth(nextRunId, nextText);
       });
       return;
     }
 
-    hiddenMeasurementRequestRef.current = null;
-    setHiddenMeasurementRequest(null);
     runTextPhase(nextRunId, nextText);
   }, [
     canChoreographAutoWidthText,
-    requestHiddenMeasurement,
+    requestMeasuredTextWidth,
     runTextPhase,
     snapshotWidthAnimation,
     stopTextTransition,
@@ -722,17 +747,9 @@ const useButtonSizeBehavior = ({
     syncDisplayedText,
   ]);
 
-  useEffect(() => {
-    if (canChoreographAutoWidthText === true) {
-      return;
-    }
-
-    hiddenMeasurementRequestRef.current = null;
-    setHiddenMeasurementRequest(null);
-  }, [canChoreographAutoWidthText]);
-
   useEffect(
     () => () => {
+      isMountedRef.current = false;
       stopTextTransition();
       widthAnimationRef.current?.stop();
       heightAnimationRef.current?.stop();
@@ -740,134 +757,78 @@ const useButtonSizeBehavior = ({
     [stopTextTransition]
   );
 
+  const animatedContainerStyle = useAnimatedStyle(
+    () => ({
+      ...(isWidthAnimating === true && widthMode !== 'stretch'
+        ? { width: animatedWidth.value }
+        : null),
+      ...(isHeightAnimating === true
+        ? { height: animatedContainerHeight.value }
+        : null),
+    }),
+    [isHeightAnimating, isWidthAnimating, widthMode]
+  );
+  const animatedShadowStyle = useAnimatedStyle(
+    () => ({
+      ...(isHeightAnimating === true
+        ? { height: animatedShadowHeight.value }
+        : null),
+    }),
+    [isHeightAnimating]
+  );
+  const animatedFaceStyle = useAnimatedStyle(
+    () => ({
+      ...(isWidthAnimating === true && widthMode !== 'stretch'
+        ? { width: animatedWidth.value }
+        : null),
+      ...(isHeightAnimating === true
+        ? { height: animatedFaceHeight.value }
+        : null),
+    }),
+    [isHeightAnimating, isWidthAnimating, widthMode]
+  );
+
   const sizeAnimatedStyles = useMemo<SizeAnimatedStyles>(
     () => ({
       container:
         isWidthAnimating === true || isHeightAnimating === true
-          ? {
-              ...(isWidthAnimating === true && widthMode !== 'stretch'
-                ? { width: animatedWidth }
-                : null),
-              ...(isHeightAnimating === true
-                ? { height: animatedContainerHeight }
-                : null),
-            }
+          ? animatedContainerStyle
           : null,
-      shadow:
-        isHeightAnimating === true
-          ? {
-              height: animatedShadowHeight,
-            }
-          : null,
+      shadow: isHeightAnimating === true ? animatedShadowStyle : null,
       bottom:
         isWidthAnimating === true || isHeightAnimating === true
-          ? {
-              ...(isWidthAnimating === true && widthMode !== 'stretch'
-                ? { width: animatedWidth }
-                : null),
-              ...(isHeightAnimating === true
-                ? { height: animatedFaceHeight }
-                : null),
-            }
+          ? animatedFaceStyle
           : null,
       progress:
         isWidthAnimating === true || isHeightAnimating === true
-          ? {
-              ...(isWidthAnimating === true && widthMode !== 'stretch'
-                ? { width: animatedWidth }
-                : null),
-              ...(isHeightAnimating === true
-                ? { height: animatedFaceHeight }
-                : null),
-            }
+          ? animatedFaceStyle
           : null,
       content:
         isWidthAnimating === true || isHeightAnimating === true
-          ? {
-              ...(isWidthAnimating === true && widthMode !== 'stretch'
-                ? { width: animatedWidth }
-                : null),
-              ...(isHeightAnimating === true
-                ? { height: animatedFaceHeight }
-                : null),
-            }
+          ? animatedFaceStyle
           : null,
       activeBackground:
         isWidthAnimating === true || isHeightAnimating === true
-          ? {
-              ...(isWidthAnimating === true && widthMode !== 'stretch'
-                ? { width: animatedWidth }
-                : null),
-              ...(isHeightAnimating === true
-                ? { height: animatedFaceHeight }
-                : null),
-            }
+          ? animatedFaceStyle
           : null,
     }),
     [
-      animatedContainerHeight,
-      animatedFaceHeight,
-      animatedShadowHeight,
-      animatedWidth,
+      animatedContainerStyle,
+      animatedFaceStyle,
+      animatedShadowStyle,
       isHeightAnimating,
       isWidthAnimating,
-      widthMode,
     ]
   );
 
   return {
     displayedText,
-    hiddenMeasurementKey:
-      hiddenMeasurementRequest !== null
-        ? `aws-btn-hidden-measure-${hiddenMeasurementRequest.id}`
-        : null,
-    hiddenMeasurementText: hiddenMeasurementRequest?.text ?? null,
-    onHiddenMeasurementLayout,
+    measurementHostEnabled: canChoreographAutoWidthText,
     onVisibleContentLayout,
-    resolvedWidth:
-      widthMode === 'fixed' && typeof width === 'number' ? width : stateWidth,
+    resolvedWidth,
+    resolvedHeightDimensions,
     sizeAnimatedStyles,
   };
 };
 
 export default useButtonSizeBehavior;
-
-export const getHiddenMeasurementTextStyle = ({
-  textColor,
-  textFontFamily,
-  textLineHeight,
-  textSize,
-}: {
-  textColor?: string;
-  textFontFamily?: string;
-  textLineHeight?: number;
-  textSize?: number;
-}): StyleProp<TextStyle> => ({
-  color: textColor,
-  fontFamily: textFontFamily,
-  fontSize: textSize,
-  fontWeight: 'bold',
-  lineHeight: textLineHeight,
-  textAlign: 'center',
-});
-
-export const getHiddenMeasurementContainerStyle = ({
-  borderWidth,
-  paddingBottom,
-  paddingHorizontal,
-  paddingTop,
-}: {
-  borderWidth: number;
-  paddingBottom: number;
-  paddingHorizontal: number;
-  paddingTop: number;
-}): StyleProp<ViewStyle> => ({
-  alignSelf: 'flex-start',
-  borderWidth,
-  flexDirection: 'row',
-  opacity: 0,
-  paddingBottom,
-  paddingHorizontal,
-  paddingTop,
-  position: 'absolute',
-});

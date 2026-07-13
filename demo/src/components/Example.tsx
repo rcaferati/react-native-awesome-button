@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
+  default as AwesomeButton,
   ThemedButton,
   getTheme,
   type ButtonVariant,
@@ -18,6 +19,7 @@ const TRANSITION_VARIANTS: ButtonVariant[] = [
   'anchor',
   'danger',
 ];
+const SIZE_TRANSITION_LABELS = ['Open', 'Open analytics dashboard'];
 const TEXT_TRANSITION_LABELS = ['welcome', 'Level 2', 'Mission#42', 'Go#3'];
 const HEAVY_JS_TASK_MS = 900;
 
@@ -32,9 +34,15 @@ function simulateHeavyJsTask(durationMs: number) {
 
 export default function Example({ index }: ThemeExampleProps) {
   const theme = getTheme(index);
+  const [commonPressCount, setCommonPressCount] = useState(0);
+  const [lastCommonPressLabel, setLastCommonPressLabel] = useState<
+    string | null
+  >(null);
   const [transitionVariantIndex, setTransitionVariantIndex] = useState(0);
+  const [sizeTransitionIndex, setSizeTransitionIndex] = useState(0);
   const [textTransitionIndex, setTextTransitionIndex] = useState(0);
   const transitionVariant = TRANSITION_VARIANTS[transitionVariantIndex];
+  const sizeTransitionLabel = SIZE_TRANSITION_LABELS[sizeTransitionIndex];
   const textTransitionLabel = TEXT_TRANSITION_LABELS[textTransitionIndex];
   const handleTimeout: ProgressDemoHandler = (
     next?: ProgressCompletionHandler
@@ -53,6 +61,15 @@ export default function Example({ index }: ThemeExampleProps) {
       return (currentIndex + 1) % TEXT_TRANSITION_LABELS.length;
     });
   };
+  const handleSizeTransitionPress = () => {
+    setSizeTransitionIndex((currentIndex) => {
+      return (currentIndex + 1) % SIZE_TRANSITION_LABELS.length;
+    });
+  };
+  const handleCommonPress = (label: string) => {
+    setLastCommonPressLabel(label);
+    setCommonPressCount((currentCount) => currentCount + 1);
+  };
   const handleHeavyStretchProgressPress: ProgressDemoHandler = (
     next?: ProgressCompletionHandler
   ) => {
@@ -61,7 +78,10 @@ export default function Example({ index }: ThemeExampleProps) {
   };
 
   useEffect(() => {
+    setCommonPressCount(0);
+    setLastCommonPressLabel(null);
     setTransitionVariantIndex(0);
+    setSizeTransitionIndex(0);
     setTextTransitionIndex(0);
   }, [theme.name]);
 
@@ -72,6 +92,7 @@ export default function Example({ index }: ThemeExampleProps) {
         <Section title="Common">
           <ThemedButton
             config={theme}
+            onPress={() => handleCommonPress('Primary')}
             style={styles.button}
             type="primary"
             size="medium"
@@ -80,6 +101,7 @@ export default function Example({ index }: ThemeExampleProps) {
           </ThemedButton>
           <ThemedButton
             config={theme}
+            onPress={() => handleCommonPress('Secondary')}
             style={styles.button}
             type="secondary"
             size="medium"
@@ -88,6 +110,7 @@ export default function Example({ index }: ThemeExampleProps) {
           </ThemedButton>
           <ThemedButton
             config={theme}
+            onPress={() => handleCommonPress('Anchor')}
             style={styles.button}
             type="anchor"
             size="medium"
@@ -96,6 +119,7 @@ export default function Example({ index }: ThemeExampleProps) {
           </ThemedButton>
           <ThemedButton
             config={theme}
+            onPress={() => handleCommonPress('Danger')}
             style={styles.button}
             type="danger"
             size="medium"
@@ -111,6 +135,11 @@ export default function Example({ index }: ThemeExampleProps) {
           >
             Disabled
           </ThemedButton>
+          <Text style={styles.feedbackText}>
+            {lastCommonPressLabel === null
+              ? 'Tap a common button to update this label.'
+              : `Last common press: ${lastCommonPressLabel} (${commonPressCount})`}
+          </Text>
         </Section>
         <Section title="Progress">
           <ThemedButton
@@ -194,6 +223,32 @@ export default function Example({ index }: ThemeExampleProps) {
               type="flat"
               size="icon"
               onPress={handleTextTransitionPress}
+            >
+              <AntDesign
+                name="stepforward"
+                size={18}
+                color={theme.buttons.primary.backgroundColor ?? theme.color}
+              />
+            </ThemedButton>
+          </View>
+        </Section>
+        <Section title="Size Transition">
+          <View style={styles.transitionControlRow}>
+            <AwesomeButton
+              {...theme.buttons.primary}
+              {...theme.size.medium}
+              width={null}
+              textTransition
+              style={styles.transitionPreviewButton}
+            >
+              {sizeTransitionLabel}
+            </AwesomeButton>
+            <ThemedButton
+              config={theme}
+              style={styles.transitionIconButton}
+              type="flat"
+              size="icon"
+              onPress={handleSizeTransitionPress}
             >
               <AntDesign
                 name="stepforward"
@@ -424,6 +479,13 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
     marginBottom: 8,
+  },
+  feedbackText: {
+    color: '#5c6270',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 4,
+    maxWidth: 220,
   },
   iconLeft: { marginRight: 5 },
   iconRight: { marginLeft: 5 },

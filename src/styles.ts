@@ -26,7 +26,10 @@ type DynamicStyles = {
   textLineHeight?: number;
   textSize?: number;
   width?: ButtonWidth;
-  stateWidth?: number | null;
+  resolvedWidth?: number | null;
+  resolvedContainerHeight?: number;
+  resolvedFaceHeight?: number;
+  resolvedShadowHeight?: number;
 };
 
 export const getStyles = ({
@@ -48,7 +51,10 @@ export const getStyles = ({
   paddingHorizontal,
   paddingTop,
   raiseLevel,
-  stateWidth,
+  resolvedWidth,
+  resolvedContainerHeight,
+  resolvedFaceHeight,
+  resolvedShadowHeight,
   stretch,
   textColor,
   textFontFamily,
@@ -56,10 +62,13 @@ export const getStyles = ({
   textSize,
   width,
 }: DynamicStyles) => {
-  const calcHeight = height + paddingBottom + paddingTop;
+  const calcHeight =
+    resolvedContainerHeight ?? height + paddingBottom + paddingTop;
   const calcWidth: ViewStyle['width'] = stretch
     ? '100%'
-    : width ?? stateWidth ?? undefined;
+    : resolvedWidth ?? width ?? undefined;
+  const faceHeight = resolvedFaceHeight ?? calcHeight - raiseLevel;
+  const shadowHeight = resolvedShadowHeight ?? height - raiseLevel;
   const borderRadiusObject: Pick<
     ViewStyle,
     | 'borderRadius'
@@ -77,7 +86,7 @@ export const getStyles = ({
 
   const dimensionsDiff: Pick<ViewStyle, 'width' | 'height'> = {
     width: calcWidth,
-    height: calcHeight - raiseLevel,
+    height: faceHeight,
   };
 
   const value = {
@@ -101,7 +110,7 @@ export const getStyles = ({
     },
     shadow: {
       bottom: -raiseLevel / 2,
-      height: height - raiseLevel,
+      height: shadowHeight,
       ...borderRadiusObject,
       backgroundColor: backgroundShadow,
     },
@@ -138,6 +147,10 @@ export const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     zIndex: 10,
   },
+  container__inner: {
+    width: '100%',
+    height: '100%',
+  },
   container__text: {
     fontWeight: 'bold',
     zIndex: 10,
@@ -166,6 +179,20 @@ export const styles = StyleSheet.create({
     position: 'absolute',
     left: '1%',
   },
+  shadow__host: {
+    position: 'absolute',
+    left: '1%',
+    width: '98%',
+  },
+  shadow__inner: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
   bottom: {
     position: 'absolute',
     bottom: 0,
@@ -182,10 +209,17 @@ export const styles = StyleSheet.create({
     top: 0,
     left: 0,
   },
+  content__inner: {
+    width: '100%',
+    height: '100%',
+  },
   activeBackground: {
     position: 'absolute',
     top: 0,
     left: 0,
+  },
+  activeBackground__hidden: {
+    opacity: 0,
   },
   text: {
     flex: 1,

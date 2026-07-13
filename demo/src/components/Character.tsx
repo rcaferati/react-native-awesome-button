@@ -110,6 +110,7 @@ const Character = ({ char = 'rick' }: CharacterProps) => {
 
   return (
     <Animated.View
+      pointerEvents="none"
       style={[
         styles.container,
         {

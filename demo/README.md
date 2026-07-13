@@ -1,6 +1,6 @@
 # React Native Awesome Button Demo
 
-`demo/` is the Expo SDK 52 compatibility harness for `@rcaferati/react-native-awesome-button`.
+`demo/` is the Expo SDK 55 compatibility harness for `@rcaferati/react-native-awesome-button`.
 
 The app resolves the package name to the local library source during development, so changes in `../src` are reflected in the demo without publishing first.
 
@@ -18,7 +18,7 @@ The app resolves the package name to the local library source during development
 - social variants
 - extra-content button compositions
 
-The demo is configured for Expo SDK 52, React Native `0.76`, Hermes, and `newArchEnabled: true`.
+The demo is configured for Expo SDK 55, React Native `0.83.6`, Hermes, and `newArchEnabled: true`.
 
 ## Install
 

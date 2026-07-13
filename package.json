@@ -59,11 +59,12 @@
     "@babel/runtime": "^7.28.4",
     "@commitlint/config-conventional": "^17.0.2",
     "@react-native-community/eslint-config": "^3.0.2",
-    "@react-native/babel-preset": "0.76.0",
+    "@react-native/babel-preset": "0.83.6",
+    "@react-native/metro-config": "0.83.6",
     "@release-it/conventional-changelog": "^5.0.0",
     "@types/jest": "^29.5.12",
     "@types/lodash.debounce": "^4.0.7",
-    "@types/react": "18.3.12",
+    "@types/react": "19.2.2",
     "commitlint": "^17.0.2",
     "eslint": "^8.4.1",
     "eslint-config-prettier": "^8.5.0",
@@ -72,22 +73,32 @@
     "lodash.debounce": "^4.0.8",
     "pod-install": "^0.1.0",
     "prettier": "^2.0.5",
-    "react": "18.2.0",
-    "react-native": "0.76.0",
+    "react": "19.2.0",
+    "react-native": "0.83.6",
     "react-native-builder-bob": "0.40.13",
-    "react-test-renderer": "18.2.0",
+    "react-native-reanimated": "^4.3.0",
+    "react-native-worklets": "^0.8.1",
+    "react-test-renderer": "19.2.0",
     "release-it": "^15.0.0",
     "typescript": "5.6.3"
   },
   "resolutions": {
-    "@types/react": "18.3.12"
+    "@types/react": "19.2.2"
   },
   "peerDependencies": {
     "react": ">=18.2.0",
-    "react-native": ">=0.76.0"
+    "react-native": ">=0.81.0 <0.86.0",
+    "react-native-reanimated": ">=4.0.0 <5.0.0",
+    "react-native-worklets": ">=0.8.0 <0.9.0"
   },
   "jest": {
     "preset": "react-native",
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(react-native|@react-native|react-native-reanimated|react-native-worklets)/)"
+    ],
     "modulePathIgnorePatterns": [
       "<rootDir>/demo/node_modules",
       "<rootDir>/lib/"
@@ -168,5 +179,8 @@
         }
       ]
     ]
+  },
+  "volta": {
+    "node": "24.15.0"
   }
 }

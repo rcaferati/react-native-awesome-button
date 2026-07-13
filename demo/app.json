@@ -3,19 +3,22 @@
     "name": "React Native Awesome Button Demo",
     "slug": "react-native-awesome-button-demo",
     "description": "Expo demo app for @rcaferati/react-native-awesome-button",
-    "privacy": "public",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rcaferati.reactnativeawesomebuttondemo"
     },
-    "jsEngine": "hermes",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "splash": {
       "image": "./src/assets/splash.png",
       "resizeMode": "contain",
@@ -30,6 +33,9 @@
     "web": {
       "bundler": "metro",
       "favicon": "./src/assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

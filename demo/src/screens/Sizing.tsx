@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import AwesomeButton, {
   ThemedButton,
 } from '@rcaferati/react-native-awesome-button';
@@ -63,6 +63,16 @@ export default function Sizing({ navigation }: SizingScreenProps) {
           Evaluates how a themed button behaves when its built-in size preset
           changes between fixed widths.
         </Text>
+        <ThemedButton
+          name="basic"
+          style={styles.controlButton}
+          type="secondary"
+          onPress={() =>
+            setSizeIndex((currentValue) => (currentValue + 1) % THEME_SIZES.length)
+          }
+        >
+          Cycle Theme Size
+        </ThemedButton>
         <Text style={styles.variantLabel}>Animated</Text>
         <ThemedButton
           name="rick"
@@ -82,25 +92,6 @@ export default function Sizing({ navigation }: SizingScreenProps) {
         >
           {currentThemeSizeLabel}
         </ThemedButton>
-        <ThemedButton
-          name="basic"
-          style={styles.controlButton}
-          type="secondary"
-          onPress={() =>
-            setSizeIndex((currentValue) => (currentValue + 1) % THEME_SIZES.length)
-          }
-        >
-          Cycle Theme Size
-        </ThemedButton>
-      </Section>
-
-      <Section title="Scope">
-        <View style={styles.scopeCard}>
-          <Text style={styles.scopeText}>
-            This screen is the dedicated RN size-behavior reference for future
-            parity work with the web packages.
-          </Text>
-        </View>
       </Section>
     </Container>
   );
@@ -130,19 +121,5 @@ const styles = StyleSheet.create({
   controlButton: {
     marginTop: 8,
     marginBottom: 8,
-  },
-  scopeCard: {
-    backgroundColor: '#EFF4FF',
-    borderColor: '#D5E3FF',
-    borderRadius: 14,
-    borderWidth: 1,
-    maxWidth: 320,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  scopeText: {
-    color: '#38507B',
-    fontSize: 13,
-    lineHeight: 19,
   },
 });

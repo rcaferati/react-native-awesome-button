@@ -6,6 +6,7 @@ import { animateLoop } from '../helpers';
 
 jest.mock('../helpers', () => ({
   animateLoop: jest.fn(() => ({
+    start: jest.fn(),
     stop: jest.fn(),
   })),
 }));
@@ -21,13 +22,19 @@ describe('Placeholder', () => {
 
     animateLoop
       .mockReturnValueOnce({
+        start: jest.fn(),
         stop: firstLoopStop,
       })
       .mockReturnValueOnce({
+        start: jest.fn(),
         stop: secondLoopStop,
       });
 
-    const component = renderer.create(<Placeholder animated={false} />);
+    let component;
+
+    act(() => {
+      component = renderer.create(<Placeholder animated={false} />);
+    });
     const placeholderView = component.root.findByType(View);
 
     act(() => {
