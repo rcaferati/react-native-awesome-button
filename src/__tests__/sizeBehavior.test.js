@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import AwesomeButton from '../Button';
 import ThemedButton from '../themed/ThemedButton';
@@ -90,7 +91,8 @@ describe('AwesomeButton size behavior', () => {
     });
 
     const animatedStyle = getContainerStyles(component).find(
-      (style) => style && (isAnimatedValue(style.width) || isAnimatedValue(style.height))
+      (style) =>
+        style && (isAnimatedValue(style.width) || isAnimatedValue(style.height))
     );
 
     expect(animatedStyle).toBeDefined();
@@ -113,9 +115,45 @@ describe('AwesomeButton size behavior', () => {
       );
     });
 
-    expect(getContainerStyles(component).find((style) => style && isAnimatedValue(style.width))).toBeUndefined();
+    expect(
+      getContainerStyles(component).find(
+        (style) => style && isAnimatedValue(style.width)
+      )
+    ).toBeUndefined();
     expect(getContainerStyles(component)[1].width).toBe(200);
     expect(getContainerStyles(component)[1].height).toBe(72);
+  });
+
+  it('snaps an in-flight fixed-size transition when animation is disabled', () => {
+    const component = createComponent(
+      <AwesomeButton width={120}>Fixed</AwesomeButton>
+    );
+
+    act(() => {
+      component.update(<AwesomeButton width={200}>Fixed</AwesomeButton>);
+    });
+    expect(
+      getContainerStyles(component).some(
+        (style) => style && isAnimatedValue(style.width)
+      )
+    ).toBe(true);
+
+    act(() => {
+      component.update(
+        <AwesomeButton animateSize={false} width={200}>
+          Fixed
+        </AwesomeButton>
+      );
+    });
+
+    expect(
+      getContainerStyles(component).some(
+        (style) => style && isAnimatedValue(style.width)
+      )
+    ).toBe(false);
+    expect(
+      getContainerStyles(component).some((style) => style?.width === 200)
+    ).toBe(true);
   });
 
   it('grows first and shrinks last for auto-width string labels with no text transition', () => {
@@ -166,7 +204,70 @@ describe('AwesomeButton size behavior', () => {
     measureHiddenWidth(component, 212);
 
     expect(getRenderedText(component)).toBe('Open analytics dashboard');
-    expect(getContainerStyles(component).find((style) => style && isAnimatedValue(style.width))).toBeUndefined();
+    expect(
+      getContainerStyles(component).find(
+        (style) => style && isAnimatedValue(style.width)
+      )
+    ).toBeUndefined();
+  });
+
+  it.each([
+    ['fixed', { width: 160 }],
+    ['stretch', { stretch: true }],
+  ])(
+    'remeasures unchanged primitive text when switching from %s to auto width',
+    (_mode, initialProps) => {
+      const component = createComponent(
+        <AwesomeButton {...initialProps}>Open</AwesomeButton>
+      );
+
+      act(() => {
+        component.update(<AwesomeButton width="auto">Open</AwesomeButton>);
+      });
+
+      expect(
+        component.root.findByProps({ testID: 'aws-btn-hidden-measure' })
+      ).toBeDefined();
+
+      measureHiddenWidth(component, 84);
+
+      expect(
+        getContainerStyles(component).some((style) => style?.width === 84)
+      ).toBe(true);
+    }
+  );
+
+  it('remeasures changing custom content through the visible layout owner', () => {
+    const component = createComponent(
+      <AwesomeButton>
+        <Text>Compact</Text>
+      </AwesomeButton>
+    );
+    let content = component.root.findByProps({ testID: 'aws-btn-text' });
+
+    act(() => {
+      content.props.onLayout({ nativeEvent: { layout: { width: 92 } } });
+    });
+    expect(
+      getContainerStyles(component).some((style) => style?.width === 92)
+    ).toBe(true);
+
+    act(() => {
+      component.update(
+        <AwesomeButton>
+          <Text>A much wider custom label</Text>
+        </AwesomeButton>
+      );
+    });
+    content = component.root.findByProps({ testID: 'aws-btn-text' });
+    act(() => {
+      content.props.onLayout({ nativeEvent: { layout: { width: 188 } } });
+      jest.runAllTimers();
+    });
+
+    expect(
+      getContainerStyles(component).some((style) => style?.width === 188)
+    ).toBe(true);
   });
 
   it('animates themed size changes when animateSize is enabled and snaps them when disabled', () => {
@@ -186,7 +287,9 @@ describe('AwesomeButton size behavior', () => {
 
     expect(
       getContainerStyles(animatedComponent).find(
-        (style) => style && (isAnimatedValue(style.width) || isAnimatedValue(style.height))
+        (style) =>
+          style &&
+          (isAnimatedValue(style.width) || isAnimatedValue(style.height))
       )
     ).toBeDefined();
 
@@ -206,7 +309,9 @@ describe('AwesomeButton size behavior', () => {
 
     expect(
       getContainerStyles(instantComponent).find(
-        (style) => style && (isAnimatedValue(style.width) || isAnimatedValue(style.height))
+        (style) =>
+          style &&
+          (isAnimatedValue(style.width) || isAnimatedValue(style.height))
       )
     ).toBeUndefined();
   });

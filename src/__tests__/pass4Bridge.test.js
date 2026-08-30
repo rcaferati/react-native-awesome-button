@@ -130,6 +130,87 @@ describe('Pass 4 React Native bridge', () => {
     expect(onPressedIn).not.toHaveBeenCalled();
   });
 
+  it('cancels the gesture when onPressedIn commits disablement', async () => {
+    const onPress = jest.fn();
+    function Harness() {
+      const [disabled, setDisabled] = useState(false);
+      return (
+        <AwesomeButton
+          disabled={disabled}
+          onPress={onPress}
+          onPressedIn={() => setDisabled(true)}
+        >
+          Tap
+        </AwesomeButton>
+      );
+    }
+    const component = renderer.create(<Harness />);
+    const pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    await act(async () => {
+      pressable.props.onPressIn(createPressEvent());
+      await flush();
+      pressable.props.onPressOut(createPressEvent());
+      pressable.props.onPress();
+      jest.runAllTimers();
+      await flush();
+    });
+
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('does not revive a cancelled gesture after the button is re-enabled', async () => {
+    const onPress = jest.fn();
+    let setDisabled;
+    function Harness() {
+      const [disabled, updateDisabled] = useState(false);
+      setDisabled = updateDisabled;
+      return (
+        <AwesomeButton disabled={disabled} onPress={onPress}>
+          Tap
+        </AwesomeButton>
+      );
+    }
+    const component = renderer.create(<Harness />);
+    let pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    await act(async () => {
+      pressable.props.onPressIn(createPressEvent());
+      await flush();
+    });
+    act(() => setDisabled(true));
+    act(() => setDisabled(false));
+    pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+    act(() => pressable.props.onPress());
+    await act(async () => {
+      jest.runAllTimers();
+      await flush();
+    });
+
+    expect(onPress).not.toHaveBeenCalled();
+
+    pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+    act(() => {
+      pressable.props.onPressIn(createPressEvent());
+      pressable.props.onPressOut(createPressEvent());
+      pressable.props.onPress();
+    });
+    await act(async () => {
+      jest.runAllTimers();
+      await flush();
+    });
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
   it('stops post-release callbacks when onPressOut tears the view down', async () => {
     const onPressedOut = jest.fn();
     let component;
@@ -181,6 +262,83 @@ describe('Pass 4 React Native bridge', () => {
     });
 
     expect(onProgressEnd).not.toHaveBeenCalled();
+  });
+
+  it('keeps progress completion dependencies captured when next is accepted', async () => {
+    const completion = jest.fn();
+    const progressEndA = jest.fn();
+    const progressEndB = jest.fn();
+    let finishProgress;
+    const component = renderer.create(
+      <AwesomeButton
+        progress
+        onPress={(next) => {
+          finishProgress = next;
+        }}
+        onProgressEnd={progressEndA}
+      >
+        Save
+      </AwesomeButton>
+    );
+
+    act(() => {
+      component.root
+        .findByProps({ testID: 'aws-btn-content-view' })
+        .props.onPress();
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(48);
+      await flush();
+    });
+
+    act(() => {
+      finishProgress(completion);
+      component.update(
+        <AwesomeButton
+          progress
+          onPress={() => undefined}
+          onProgressEnd={progressEndB}
+        >
+          Save
+        </AwesomeButton>
+      );
+    });
+    await act(async () => {
+      jest.runAllTimers();
+      await flush();
+      jest.runAllTimers();
+      await flush();
+    });
+
+    expect(completion).toHaveBeenCalledTimes(1);
+    expect(progressEndA).toHaveBeenCalledTimes(1);
+    expect(progressEndB).not.toHaveBeenCalled();
+  });
+
+  it('keeps the release callback captured at physical press-out', async () => {
+    const pressedOutA = jest.fn();
+    const pressedOutB = jest.fn();
+    const component = renderer.create(
+      <AwesomeButton onPressedOut={pressedOutA}>Tap</AwesomeButton>
+    );
+    const pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    act(() => {
+      pressable.props.onPressIn(createPressEvent());
+      pressable.props.onPressOut(createPressEvent());
+      component.update(
+        <AwesomeButton onPressedOut={pressedOutB}>Tap</AwesomeButton>
+      );
+    });
+    await act(async () => {
+      jest.runAllTimers();
+      await flush();
+    });
+
+    expect(pressedOutA).toHaveBeenCalledTimes(1);
+    expect(pressedOutB).not.toHaveBeenCalled();
   });
 
   it('keeps atomic progress free of fabricated physical release callbacks', async () => {
@@ -320,6 +478,77 @@ describe('Pass 4 React Native bridge', () => {
     });
     act(() => jest.advanceTimersByTime(500));
     expect(actionB).toHaveBeenCalledTimes(1);
+  });
+
+  it('defers a newly added long-press action until the next gesture', () => {
+    const action = jest.fn();
+    const component = renderer.create(<AwesomeButton>Hold</AwesomeButton>);
+    let pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    act(() => {
+      pressable.props.onPressIn(createPressEvent());
+      component.update(
+        <AwesomeButton onLongPressAction={action}>Hold</AwesomeButton>
+      );
+      jest.advanceTimersByTime(500);
+      pressable.props.onPressOut(createPressEvent());
+    });
+
+    expect(action).not.toHaveBeenCalled();
+
+    pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+    act(() => {
+      pressable.props.onPressIn(createPressEvent());
+      jest.advanceTimersByTime(500);
+    });
+
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an ordinary hold activatable when no long-press handler exists', async () => {
+    const onPress = jest.fn();
+    const component = renderer.create(
+      <AwesomeButton onPress={onPress}>Hold</AwesomeButton>
+    );
+    const pressable = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    });
+
+    act(() => {
+      pressable.props.onPressIn(createPressEvent());
+      jest.advanceTimersByTime(1000);
+      pressable.props.onPressOut(createPressEvent());
+      pressable.props.onPress();
+    });
+    await act(async () => {
+      jest.runAllTimers();
+      await flush();
+    });
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels an owned long-press timer on unmount', () => {
+    const action = jest.fn();
+    const component = renderer.create(
+      <AwesomeButton onLongPressAction={action}>Hold</AwesomeButton>
+    );
+
+    act(() => {
+      component.root
+        .findByProps({ testID: 'aws-btn-content-view' })
+        .props.onPressIn(createPressEvent());
+      component.unmount();
+    });
+    act(() => {
+      jest.advanceTimersByTime(500);
+    });
+
+    expect(action).not.toHaveBeenCalled();
   });
 
   it('keeps legacy long press physical-only and routes atomic long to the bridge', () => {
