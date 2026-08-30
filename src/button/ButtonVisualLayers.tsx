@@ -282,6 +282,7 @@ const ButtonVisualLayers = ({
               styles.progress,
               dynamicStyles.progress,
               animatedValues.animatedProgress,
+              sizeAnimatedStyles.progress,
             ]}
           />
         ) : null}
@@ -300,6 +301,7 @@ const ButtonVisualLayers = ({
     animatedValues.animatedProgress,
     dynamicStyles.progress,
     showProgressBar,
+    sizeAnimatedStyles.progress,
   ]);
   const renderContent = useMemo(() => {
     if (!hasRenderableChildren) {

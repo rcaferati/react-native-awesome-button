@@ -94,75 +94,73 @@ const useButtonSizeBehavior = ({
     widthCommands: widthOwner.commands,
     widthMode: widthOwner.widthMode,
   });
+  const preservesFixedWidth =
+    animateSize && !reduceMotion && widthOwner.widthMode === 'fixed';
+  const usesAnimatedWidth =
+    animateSize &&
+    !reduceMotion &&
+    widthOwner.widthMode !== 'stretch' &&
+    widthOwner.isAnimating;
+  const usesWidthOverride = preservesFixedWidth || usesAnimatedWidth;
+  const preservesHeight = animateSize && !reduceMotion;
+  const widthOverride = usesAnimatedWidth
+    ? widthOwner.animatedWidth
+    : widthOwner.resolvedWidth;
+  const containerHeightOverride = heightOwner.isAnimating
+    ? heightOwner.animatedContainerHeight
+    : heightOwner.renderedDimensions.container;
+  const faceHeightOverride = heightOwner.isAnimating
+    ? heightOwner.animatedFaceHeight
+    : heightOwner.renderedDimensions.face;
+  const shadowHeightOverride = heightOwner.isAnimating
+    ? heightOwner.animatedShadowHeight
+    : heightOwner.renderedDimensions.shadow;
   const sizeAnimatedStyles = useMemo<SizeAnimatedStyles>(
     () => ({
       container:
-        widthOwner.isAnimating || heightOwner.isAnimating
+        usesWidthOverride || preservesHeight
           ? {
-              ...(widthOwner.isAnimating && widthOwner.widthMode !== 'stretch'
-                ? { width: widthOwner.animatedWidth }
-                : null),
-              ...(heightOwner.isAnimating
-                ? { height: heightOwner.animatedContainerHeight }
-                : null),
+              ...(usesWidthOverride ? { width: widthOverride } : null),
+              ...(preservesHeight ? { height: containerHeightOverride } : null),
             }
           : null,
-      shadow: heightOwner.isAnimating
-        ? { height: heightOwner.animatedShadowHeight }
-        : null,
+      shadow: preservesHeight ? { height: shadowHeightOverride } : null,
       bottom:
-        widthOwner.isAnimating || heightOwner.isAnimating
+        usesWidthOverride || preservesHeight
           ? {
-              ...(widthOwner.isAnimating && widthOwner.widthMode !== 'stretch'
-                ? { width: widthOwner.animatedWidth }
-                : null),
-              ...(heightOwner.isAnimating
-                ? { height: heightOwner.animatedFaceHeight }
-                : null),
+              ...(usesWidthOverride ? { width: widthOverride } : null),
+              ...(preservesHeight ? { height: faceHeightOverride } : null),
             }
           : null,
       progress:
-        widthOwner.isAnimating || heightOwner.isAnimating
+        usesWidthOverride || preservesHeight
           ? {
-              ...(widthOwner.isAnimating && widthOwner.widthMode !== 'stretch'
-                ? { width: widthOwner.animatedWidth }
-                : null),
-              ...(heightOwner.isAnimating
-                ? { height: heightOwner.animatedFaceHeight }
-                : null),
+              ...(usesWidthOverride ? { width: widthOverride } : null),
+              ...(preservesHeight ? { height: faceHeightOverride } : null),
             }
           : null,
       content:
-        widthOwner.isAnimating || heightOwner.isAnimating
+        usesWidthOverride || preservesHeight
           ? {
-              ...(widthOwner.isAnimating && widthOwner.widthMode !== 'stretch'
-                ? { width: widthOwner.animatedWidth }
-                : null),
-              ...(heightOwner.isAnimating
-                ? { height: heightOwner.animatedFaceHeight }
-                : null),
+              ...(usesWidthOverride ? { width: widthOverride } : null),
+              ...(preservesHeight ? { height: faceHeightOverride } : null),
             }
           : null,
       activeBackground:
-        widthOwner.isAnimating || heightOwner.isAnimating
+        usesWidthOverride || preservesHeight
           ? {
-              ...(widthOwner.isAnimating && widthOwner.widthMode !== 'stretch'
-                ? { width: widthOwner.animatedWidth }
-                : null),
-              ...(heightOwner.isAnimating
-                ? { height: heightOwner.animatedFaceHeight }
-                : null),
+              ...(usesWidthOverride ? { width: widthOverride } : null),
+              ...(preservesHeight ? { height: faceHeightOverride } : null),
             }
           : null,
     }),
     [
-      heightOwner.animatedContainerHeight,
-      heightOwner.animatedFaceHeight,
-      heightOwner.animatedShadowHeight,
-      heightOwner.isAnimating,
-      widthOwner.animatedWidth,
-      widthOwner.isAnimating,
-      widthOwner.widthMode,
+      containerHeightOverride,
+      faceHeightOverride,
+      preservesHeight,
+      shadowHeightOverride,
+      usesWidthOverride,
+      widthOverride,
     ]
   );
 

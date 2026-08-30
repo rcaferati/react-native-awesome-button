@@ -78,12 +78,16 @@ describe('AwesomeButton size behavior', () => {
     restoreAnimationFrame();
   });
 
-  it('defaults animateSize to true for fixed-size updates', () => {
+  it('keeps committed geometry attached across fixed-size updates', () => {
     const component = createComponent(
       <AwesomeButton width={120} height={60}>
         Fixed
       </AwesomeButton>
     );
+
+    const initialCommittedStyle = getContainerStyles(component)[3];
+
+    expect(initialCommittedStyle).toEqual({ height: 60, width: 120 });
 
     act(() => {
       component.update(
@@ -101,6 +105,8 @@ describe('AwesomeButton size behavior', () => {
     expect(animatedStyle).toBeDefined();
     expect(isAnimatedValue(animatedStyle.width)).toBe(true);
     expect(isAnimatedValue(animatedStyle.height)).toBe(true);
+    expect(animatedStyle.width.__getValue()).toBe(120);
+    expect(animatedStyle.height.__getValue()).toBe(60);
 
     const depthAnimatedStyle = getLayerStyles(component, 'aws-btn-bottom').find(
       (style) => style && isAnimatedValue(style.width)
@@ -111,6 +117,14 @@ describe('AwesomeButton size behavior', () => {
 
     expect(depthAnimatedStyle.width).toBe(animatedStyle.width);
     expect(faceAnimatedStyle.width).toBe(animatedStyle.width);
+
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    const settledAnimatedStyle = getContainerStyles(component)[3];
+
+    expect(settledAnimatedStyle).toEqual({ height: 72, width: 200 });
   });
 
   it('keeps fixed-size changes instant when animateSize is disabled', () => {

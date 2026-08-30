@@ -57,11 +57,9 @@ const useButtonWidthOwner = ({
 
   const syncStateWidth = useCallback((value: number | null) => {
     currentValueRef.current = value;
-    if (modeRef.current === 'auto') {
-      setStateWidth((currentValue) =>
-        currentValue === value ? currentValue : value
-      );
-    }
+    setStateWidth((currentValue) =>
+      currentValue === value ? currentValue : value
+    );
   }, []);
 
   const snapshot = useCallback(
@@ -147,7 +145,7 @@ const useButtonWidthOwner = ({
     [animateTo, getCurrent, setImmediately, snapshot]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previousMode = modeRef.current;
     modeRef.current = widthMode;
 
@@ -178,7 +176,7 @@ const useButtonWidthOwner = ({
     if (widthMode === 'fixed' && typeof width === 'number') animateTo(width);
   }, [animateTo, animatedOpacity, setImmediately, width, widthMode]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (
       widthMode !== 'fixed' ||
       typeof width !== 'number' ||
@@ -202,8 +200,7 @@ const useButtonWidthOwner = ({
     animatedWidth,
     commands,
     isAnimating,
-    resolvedWidth:
-      widthMode === 'fixed' && typeof width === 'number' ? width : stateWidth,
+    resolvedWidth: stateWidth,
     widthMode,
   };
 };

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Animated, Easing } from 'react-native';
 import {
   areHeightDimensionsEqual,
@@ -23,6 +29,7 @@ const useButtonHeightOwner = ({
   widthMode,
 }: UseButtonHeightOwnerOptions) => {
   const [isAnimating, setIsAnimating] = useState(false);
+  const [renderedDimensions, setRenderedDimensions] = useState(dimensions);
   const currentRef = useRef(dimensions);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const animationTokenRef = useRef(0);
@@ -57,7 +64,7 @@ const useButtonHeightOwner = ({
             animationRef.current?.stop();
             animationRef.current = null;
             setAnimatingFlag(false);
-            callback({
+            const resolvedDimensions = {
               container:
                 typeof containerValue === 'number'
                   ? containerValue
@@ -70,7 +77,9 @@ const useButtonHeightOwner = ({
                 typeof shadowValue === 'number'
                   ? shadowValue
                   : currentRef.current.shadow,
-            });
+            };
+            setRenderedDimensions(resolvedDimensions);
+            callback(resolvedDimensions);
           });
         });
       });
@@ -90,6 +99,9 @@ const useButtonHeightOwner = ({
       animationRef.current = null;
       setAnimatingFlag(false);
       currentRef.current = next;
+      setRenderedDimensions((current) =>
+        areHeightDimensionsEqual(current, next) ? current : next
+      );
       animatedContainerHeight.setValue(next.container);
       animatedFaceHeight.setValue(next.face);
       animatedShadowHeight.setValue(next.shadow);
@@ -121,6 +133,7 @@ const useButtonHeightOwner = ({
         animationTokenRef.current += 1;
         const animationToken = animationTokenRef.current;
         currentRef.current = next;
+        setRenderedDimensions(next);
         animatedContainerHeight.setValue(current.container);
         animatedFaceHeight.setValue(current.face);
         animatedShadowHeight.setValue(current.shadow);
@@ -166,7 +179,7 @@ const useButtonHeightOwner = ({
     ]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previousWidthMode = widthModeRef.current;
     widthModeRef.current = widthMode;
     if (!didInitializeRef.current) {
@@ -195,6 +208,7 @@ const useButtonHeightOwner = ({
     animatedFaceHeight,
     animatedShadowHeight,
     isAnimating,
+    renderedDimensions,
   };
 };
 
