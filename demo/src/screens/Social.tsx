@@ -57,13 +57,18 @@ export default function Social({ navigation }: SocialScreenProps) {
         </ThemedButton>
         <ThemedButton
           name={theme}
-          style={styles.button}
+          containerStyle={styles.button}
           progress
           onPress={handleTimeout}
-          type="twitter"
+          type="x"
           width={180}
-          borderRadius={8}
-          raiseLevel={8}
+          faceHeight={52}
+          accessibilityLabel="X"
+          buttonStyle={{
+            borderRadius: 8,
+            raiseAmount: 8,
+            pressInAnimationDuration: 140,
+          }}
         >
           <AntDesign
             style={[styles.iconLeft, { marginTop: 1, marginRight: 5 }]}
@@ -71,7 +76,7 @@ export default function Social({ navigation }: SocialScreenProps) {
             size={24}
             color="white"
           />
-          <Text style={styles.text}>Twitter</Text>
+          <Text style={styles.text}>X</Text>
         </ThemedButton>
         <ThemedButton
           name={theme}

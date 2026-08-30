@@ -9,6 +9,7 @@ import {
 import {
   Animated,
   Easing,
+  type ColorValue,
   type LayoutChangeEvent,
   type StyleProp,
   type TextStyle,
@@ -17,7 +18,7 @@ import {
 import { runTextTransition } from './textTransition';
 import type { ButtonWidth } from './types';
 
-const SIZE_ANIMATION_DURATION = 125;
+const SIZE_ANIMATION_DURATION = 175;
 const SIZE_ANIMATION_EASING = Easing.bezier(0.3, 0.05, 0.2, 1);
 
 type WidthMode = 'auto' | 'fixed' | 'stretch';
@@ -106,6 +107,7 @@ type UseButtonSizeBehaviorParams = {
   paddingBottom: number;
   paddingTop: number;
   raiseLevel: number;
+  reduceMotion?: boolean;
   stretch?: boolean;
   textTransition?: boolean;
   width: ButtonWidth;
@@ -132,6 +134,7 @@ const useButtonSizeBehavior = ({
   paddingBottom,
   paddingTop,
   raiseLevel,
+  reduceMotion = false,
   stretch,
   textTransition = false,
   width,
@@ -275,6 +278,7 @@ const useButtonSizeBehavior = ({
     (nextWidth: number, onComplete?: () => void) => {
       if (
         animateSize !== true ||
+        reduceMotion ||
         currentWidthValueRef.current === null ||
         currentWidthValueRef.current === nextWidth
       ) {
@@ -323,6 +327,7 @@ const useButtonSizeBehavior = ({
     [
       animateSize,
       animatedWidth,
+      reduceMotion,
       setWidthAnimatingFlag,
       setWidthImmediately,
       snapshotWidthAnimation,
@@ -395,6 +400,7 @@ const useButtonSizeBehavior = ({
     (nextDimensions: HeightDimensions) => {
       if (
         animateSize !== true ||
+        reduceMotion ||
         areHeightDimensionsEqual(
           currentHeightDimensionsRef.current,
           nextDimensions
@@ -459,6 +465,7 @@ const useButtonSizeBehavior = ({
       animatedContainerHeight,
       animatedFaceHeight,
       animatedShadowHeight,
+      reduceMotion,
       setHeightAnimatingFlag,
       setHeightImmediately,
       snapshotHeightAnimation,
@@ -471,6 +478,7 @@ const useButtonSizeBehavior = ({
 
       if (
         textTransition !== true ||
+        reduceMotion ||
         !isNonEmptyString(targetText) ||
         !isNonEmptyString(displayedTextRef.current) ||
         displayedTextRef.current === targetText
@@ -498,7 +506,7 @@ const useButtonSizeBehavior = ({
         },
       });
     },
-    [stopTextTransition, syncDisplayedText, textTransition]
+    [reduceMotion, stopTextTransition, syncDisplayedText, textTransition]
   );
 
   const requestHiddenMeasurement = useCallback((text: string) => {
@@ -597,7 +605,11 @@ const useButtonSizeBehavior = ({
 
       animatedOpacity.setValue(1);
 
-      if (currentWidthValueRef.current === null || animateSize !== true) {
+      if (
+        currentWidthValueRef.current === null ||
+        animateSize !== true ||
+        reduceMotion
+      ) {
         setWidthImmediately(nextWidth);
         return;
       }
@@ -609,6 +621,7 @@ const useButtonSizeBehavior = ({
       animateWidthTo,
       animatedOpacity,
       canChoreographAutoWidthText,
+      reduceMotion,
       setWidthImmediately,
     ]
   );
@@ -838,7 +851,7 @@ export const getHiddenMeasurementTextStyle = ({
   textLineHeight,
   textSize,
 }: {
-  textColor?: string;
+  textColor?: ColorValue;
   textFontFamily?: string;
   textLineHeight?: number;
   textSize?: number;

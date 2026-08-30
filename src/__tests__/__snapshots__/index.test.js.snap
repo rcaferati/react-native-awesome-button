@@ -2,12 +2,13 @@
 
 exports[`AwesomeButton should render 1`] = `
 <View
+  accessibilityActions={[]}
   accessibilityRole="button"
   accessibilityState={
     {
       "busy": undefined,
       "checked": undefined,
-      "disabled": undefined,
+      "disabled": true,
       "expanded": undefined,
       "selected": undefined,
     }
@@ -23,6 +24,7 @@ exports[`AwesomeButton should render 1`] = `
   accessible={true}
   collapsable={false}
   focusable={true}
+  onAccessibilityAction={[Function]}
   onBlur={[Function]}
   onClick={[Function]}
   onFocus={[Function]}
@@ -32,6 +34,19 @@ exports[`AwesomeButton should render 1`] = `
   onResponderTerminate={[Function]}
   onResponderTerminationRequest={[Function]}
   onStartShouldSetResponder={[Function]}
+  style={
+    [
+      undefined,
+      {
+        "alignItems": "center",
+        "justifyContent": "center",
+      },
+      {
+        "minHeight": 44,
+        "minWidth": 44,
+      },
+    ]
+  }
   testID="aws-btn-content-view"
 >
   <View
@@ -197,12 +212,14 @@ exports[`AwesomeButton should render 1`] = `
 
 exports[`AwesomeButton should render a default text children 1`] = `
 <View
+  accessibilityActions={[]}
+  accessibilityLabel="Default"
   accessibilityRole="button"
   accessibilityState={
     {
       "busy": undefined,
       "checked": undefined,
-      "disabled": undefined,
+      "disabled": false,
       "expanded": undefined,
       "selected": undefined,
     }
@@ -218,6 +235,7 @@ exports[`AwesomeButton should render a default text children 1`] = `
   accessible={true}
   collapsable={false}
   focusable={true}
+  onAccessibilityAction={[Function]}
   onBlur={[Function]}
   onClick={[Function]}
   onFocus={[Function]}
@@ -227,6 +245,19 @@ exports[`AwesomeButton should render a default text children 1`] = `
   onResponderTerminate={[Function]}
   onResponderTerminationRequest={[Function]}
   onStartShouldSetResponder={[Function]}
+  style={
+    [
+      undefined,
+      {
+        "alignItems": "center",
+        "justifyContent": "center",
+      },
+      {
+        "minHeight": 44,
+        "minWidth": 44,
+      },
+    ]
+  }
   testID="aws-btn-content-view"
 >
   <View
@@ -359,6 +390,7 @@ exports[`AwesomeButton should render a default text children 1`] = `
               "alignItems": "center",
               "flex": 1,
               "flexDirection": "row",
+              "gap": undefined,
               "justifyContent": "center",
               "opacity": 1,
               "paddingBottom": 0,
@@ -373,6 +405,7 @@ exports[`AwesomeButton should render a default text children 1`] = `
           }
         >
           <Text
+            allowFontScaling={true}
             style={
               [
                 {

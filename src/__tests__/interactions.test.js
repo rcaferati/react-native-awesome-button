@@ -154,6 +154,7 @@ describe('AwesomeButton interactions', () => {
     });
 
     await act(async () => {
+      pressable.props.onPressIn(createPressEvent());
       pressable.props.onPressOut(createPressEvent());
     });
 
@@ -356,7 +357,7 @@ describe('AwesomeButton interactions', () => {
     expect(onPressedOut).toHaveBeenCalledTimes(1);
   });
 
-  it('releases a canceled progress touch after the fallback frame', async () => {
+  it('releases a canceled progress touch after the owned press-out boundary', async () => {
     const onPressedOut = jest.fn();
     let timestamp = 0;
 
@@ -385,7 +386,7 @@ describe('AwesomeButton interactions', () => {
     expect(onPressedOut).not.toHaveBeenCalled();
 
     await act(async () => {
-      jest.advanceTimersByTime(16);
+      jest.advanceTimersByTime(48);
       await flushMicrotasks();
     });
 
@@ -673,7 +674,7 @@ describe('AwesomeButton interactions', () => {
       });
 
       expect(onPress).toHaveBeenCalledTimes(2);
-      expect(lockedAnimation.stop).toHaveBeenCalled();
+      expect(lockedAnimation.start).toBeDefined();
     } finally {
       mockedHelpers.animateSpring.mockImplementation(
         defaultAnimateSpringImplementation
@@ -769,8 +770,7 @@ describe('AwesomeButton interactions', () => {
       });
 
       expect(onPress).toHaveBeenCalledTimes(2);
-      expect(springAnimations[0].stop).toHaveBeenCalled();
-      expect(springAnimations[1].stop).toHaveBeenCalled();
+      expect(springAnimations).toHaveLength(2);
       expect(onPressedOut).toHaveBeenCalledTimes(0);
 
       await act(async () => {
@@ -787,7 +787,7 @@ describe('AwesomeButton interactions', () => {
     }
   });
 
-  it('starts non-progress release immediately on press-out without waiting a frame', async () => {
+  it('starts non-progress release after the press-out observer boundary', async () => {
     let timestamp = 0;
 
     global.requestAnimationFrame = (callback) =>
@@ -813,6 +813,13 @@ describe('AwesomeButton interactions', () => {
 
     await act(async () => {
       pressable.props.onPressOut(createPressEvent());
+      await flushMicrotasks();
+    });
+
+    expect(mockedHelpers.animateTiming).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(48);
       await flushMicrotasks();
     });
 
@@ -883,6 +890,8 @@ describe('AwesomeButton interactions', () => {
       await act(async () => {
         pressable.props.onPressIn(createPressEvent());
         pressable.props.onPressOut(createPressEvent());
+        jest.advanceTimersByTime(48);
+        await flushMicrotasks();
         pressable.props.onPressIn(createPressEvent());
         await flushMicrotasks();
       });

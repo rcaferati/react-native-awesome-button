@@ -57,6 +57,9 @@ yarn-debug.log
 yarn-error.log
 .yarn/*
 demo/.yarn/
+coverage/
+temp/
+*.tgz
 
 # BUCK
 buck-out/

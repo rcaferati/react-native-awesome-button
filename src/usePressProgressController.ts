@@ -2,22 +2,18 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
-import { Animated, type GestureResponderEvent } from 'react-native';
-import { frameThrower } from '@rcaferati/wac';
-import debounce from 'lodash.debounce';
+import { Animated, Easing, type GestureResponderEvent } from 'react-native';
 import { animateElastic, animateSpring, animateTiming } from './helpers';
 import { cancelFrame, requestFrame } from './frameLoop';
 import { ANIMATED_TIMING_OFF, DEFAULT_DEBOUNCED_PRESS_TIME } from './constants';
-import type { AwesomeButtonOnPress, ProgressCompletionHandler } from './types';
-
-// WAC's frameThrower waits "future frames" plus one extra layout hop,
-// so 1 gives us roughly two animation frames before running onPress.
-const PRESS_ACTION_FRAME_THROW = 2;
-const PRESS_OUT_OBSERVER_FRAME_THROW = 2;
+import type {
+  AwesomeButtonAnimationCurve,
+  AwesomeButtonOnPress,
+  ProgressCompletionHandler,
+} from './types';
 
 type PressProgressControllerOptions = {
   activeOpacity: number;
@@ -26,723 +22,784 @@ type PressProgressControllerOptions = {
   animatedOpacity: Animated.Value;
   animatedValue: Animated.Value;
   activityOpacity: Animated.Value;
+  animationCurve?: AwesomeButtonAnimationCurve;
+  animationDuration?: number;
+  debouncedPressTime?: number;
   disabled: boolean;
   hasChildren: boolean;
+  hasLongPress: boolean;
   loadingOpacity: Animated.Value;
-  onPress: AwesomeButtonOnPress;
-  onPressIn: (event: GestureResponderEvent) => void;
-  onPressOut: (event: GestureResponderEvent) => void;
-  onPressedIn: () => void;
-  onPressedOut: () => void;
-  onProgressEnd: () => void;
-  onProgressStart: () => void;
+  onPhysicalLongPress: (event: GestureResponderEvent) => boolean;
+  onPress?: AwesomeButtonOnPress;
+  onPressIn?: (event: GestureResponderEvent) => void;
+  onPressOut?: (event: GestureResponderEvent) => void;
+  onPressedIn?: () => void;
+  onPressedOut?: () => void;
+  onProgressEnd?: () => void;
+  onProgressStart?: () => void;
+  pressInAnimationDuration?: number;
   progress: boolean;
   progressLoadingTime: number;
+  reduceMotion: boolean;
+  showProgressBar: boolean;
   springRelease: boolean;
   textOpacity: Animated.Value;
-  debouncedPressTime?: number;
 };
 
-type DebouncedPressHandler = AwesomeButtonOnPress & {
-  cancel?: () => void;
+type GestureDisposition = 'armed' | 'blocked' | 'long';
+
+type ActiveGesture = {
+  id: number;
+  disposition: GestureDisposition;
 };
 
-type PressGestureDisposition = 'idle' | 'armed' | 'blocked';
+type LiveDependencies = Omit<
+  PressProgressControllerOptions,
+  | 'animatedActive'
+  | 'animatedLoading'
+  | 'animatedOpacity'
+  | 'animatedValue'
+  | 'activityOpacity'
+  | 'loadingOpacity'
+  | 'textOpacity'
+>;
 
-const usePressProgressController = ({
-  activeOpacity,
-  animatedActive,
-  animatedLoading,
-  animatedOpacity,
-  animatedValue,
-  activityOpacity,
-  disabled,
-  hasChildren,
-  loadingOpacity,
-  onPress,
-  onPressIn,
-  onPressOut,
-  onPressedIn,
-  onPressedOut,
-  onProgressEnd,
-  onProgressStart,
-  progress,
-  progressLoadingTime,
-  springRelease,
-  textOpacity,
-  debouncedPressTime = DEFAULT_DEBOUNCED_PRESS_TIME,
-}: PressProgressControllerOptions) => {
+type ProgressRun = {
+  id: number;
+  completionClaimed: boolean;
+  activationDelivered: boolean;
+  physicalLifecycle: boolean;
+  onProgressEndSnapshot?: () => void;
+  completionSnapshot?: () => void;
+};
+
+const usePressProgressController = (
+  options: PressProgressControllerOptions
+) => {
+  const {
+    animatedActive,
+    animatedLoading,
+    animatedOpacity,
+    animatedValue,
+    activityOpacity,
+    loadingOpacity,
+    textOpacity,
+  } = options;
   const [activity, setActivity] = useState(false);
-  const progressing = useRef(false);
-  const pressed = useRef(false);
-  const releasing = useRef(false);
-  const gestureIdRef = useRef(0);
-  const activeGestureIdRef = useRef<number | null>(null);
-  const pressingGestureIdRef = useRef<number | null>(null);
-  const pressedGestureIdRef = useRef<number | null>(null);
-  const releaseRequestedForGestureIdRef = useRef<number | null>(null);
-  const progressEndFrameRef = useRef<ReturnType<typeof requestFrame> | null>(
-    null
-  );
-  const progressReleaseFrameRef = useRef<ReturnType<
-    typeof requestFrame
-  > | null>(null);
-  const releasedGestureClearTimeoutRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-  const progressStartFrameRef = useRef<ReturnType<typeof requestFrame> | null>(
-    null
-  );
-  const activeGestureDispositionRef = useRef<PressGestureDisposition>('idle');
-  const releasedGestureDispositionRef = useRef<PressGestureDisposition>('idle');
-  const pressActionLifecycleTokenRef = useRef(0);
-  const pressOutObserverLifecycleTokenRef = useRef(0);
-  const pressAnimationTokenRef = useRef(0);
-  const releaseAnimationTokenRef = useRef(0);
-  const pressAnimation = useRef<Animated.CompositeAnimation | null>(null);
+  const liveRef = useRef<LiveDependencies>(options);
+  const mountedRef = useRef(true);
+  const gestureSequenceRef = useRef(0);
+  const activeGestureRef = useRef<ActiveGesture | null>(null);
+  const releasedGestureRef = useRef<GestureDisposition | null>(null);
+  const pressedRef = useRef(false);
+  const releasingRef = useRef(false);
+  const busyRef = useRef(false);
+  const lastAcceptedAtRef = useRef<number | null>(null);
+  const progressSequenceRef = useRef(0);
+  const progressRunRef = useRef<ProgressRun | null>(null);
+  const releaseSnapshotRef = useRef<(() => void) | undefined>(undefined);
+  const releaseContinuationRef = useRef<(() => void) | undefined>(undefined);
+  const pressAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const releaseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
-  const progressLoadingAnimationRef =
-    useRef<Animated.CompositeAnimation | null>(null);
-  const progressContentOutAnimationRef =
-    useRef<Animated.CompositeAnimation | null>(null);
-  const progressStartedRef = useRef(false);
-  const nonProgressReleaseReconcileFrameRef = useRef<ReturnType<
+  const progressAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const progressCompletionFrameRef = useRef<ReturnType<
     typeof requestFrame
   > | null>(null);
-  const onPressRef = useRef(onPress);
-  const onPressOutRef = useRef(onPressOut);
-  const disabledRef = useRef(disabled);
-  const hasChildrenRef = useRef(hasChildren);
+  const progressFallbackFrameRef = useRef<ReturnType<
+    typeof requestFrame
+  > | null>(null);
+  const releasedDispositionFrameRef = useRef<ReturnType<
+    typeof requestFrame
+  > | null>(null);
+  const activationFrameOneRef = useRef<ReturnType<typeof requestFrame> | null>(
+    null
+  );
+  const activationFrameTwoRef = useRef<ReturnType<typeof requestFrame> | null>(
+    null
+  );
+  const pressOutFrameOneRef = useRef<ReturnType<typeof requestFrame> | null>(
+    null
+  );
+  const pressOutFrameTwoRef = useRef<ReturnType<typeof requestFrame> | null>(
+    null
+  );
 
   useLayoutEffect(() => {
-    onPressRef.current = onPress;
-    onPressOutRef.current = onPressOut;
-    disabledRef.current = disabled;
-    hasChildrenRef.current = hasChildren;
+    liveRef.current = options;
   });
 
-  const debouncedPress = useMemo<DebouncedPressHandler>(() => {
-    if (debouncedPressTime === 0) {
-      return (next) => onPressRef.current(next);
-    }
-
-    const handler = debounce(
-      (next?: ProgressCompletionHandler) => onPressRef.current(next),
-      debouncedPressTime,
-      {
-        trailing: false,
-        leading: true,
-      }
+  const isStructurallyEligible = useCallback(() => {
+    const live = liveRef.current;
+    return (
+      mountedRef.current &&
+      !live.disabled &&
+      live.hasChildren &&
+      !busyRef.current
     );
-
-    return handler as DebouncedPressHandler;
-  }, [debouncedPressTime]);
-  const debouncedPressRef = useRef<DebouncedPressHandler>(debouncedPress);
-
-  useLayoutEffect(() => {
-    debouncedPressRef.current = debouncedPress;
-  }, [debouncedPress]);
-
-  const stopProgressStartAnimations = useCallback(() => {
-    progressLoadingAnimationRef.current?.stop();
-    progressContentOutAnimationRef.current?.stop();
-    progressLoadingAnimationRef.current = null;
-    progressContentOutAnimationRef.current = null;
   }, []);
 
-  const cancelPendingFrames = useCallback(() => {
-    cancelFrame(progressEndFrameRef.current);
-    cancelFrame(progressReleaseFrameRef.current);
-    clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
-    cancelFrame(progressStartFrameRef.current);
-    cancelFrame(nonProgressReleaseReconcileFrameRef.current);
-    stopProgressStartAnimations();
-    progressEndFrameRef.current = null;
-    progressReleaseFrameRef.current = null;
-    releasedGestureClearTimeoutRef.current = null;
-    progressStartFrameRef.current = null;
-    nonProgressReleaseReconcileFrameRef.current = null;
-    activeGestureDispositionRef.current = 'idle';
-    releasedGestureDispositionRef.current = 'idle';
-    progressStartedRef.current = false;
-    activeGestureIdRef.current = null;
-    pressingGestureIdRef.current = null;
-    pressedGestureIdRef.current = null;
-    releaseRequestedForGestureIdRef.current = null;
-    pressActionLifecycleTokenRef.current += 1;
-    pressOutObserverLifecycleTokenRef.current += 1;
-    pressAnimationTokenRef.current += 1;
-    releaseAnimationTokenRef.current += 1;
-  }, [stopProgressStartAnimations]);
+  const stopVisualWork = useCallback(() => {
+    pressAnimationRef.current?.stop();
+    releaseAnimationRef.current?.stop();
+    progressAnimationRef.current?.stop();
+    pressAnimationRef.current = null;
+    releaseAnimationRef.current = null;
+    progressAnimationRef.current = null;
+    cancelFrame(progressCompletionFrameRef.current);
+    cancelFrame(progressFallbackFrameRef.current);
+    cancelFrame(releasedDispositionFrameRef.current);
+    cancelFrame(activationFrameOneRef.current);
+    cancelFrame(activationFrameTwoRef.current);
+    cancelFrame(pressOutFrameOneRef.current);
+    cancelFrame(pressOutFrameTwoRef.current);
+    progressCompletionFrameRef.current = null;
+    progressFallbackFrameRef.current = null;
+    releasedDispositionFrameRef.current = null;
+    activationFrameOneRef.current = null;
+    activationFrameTwoRef.current = null;
+    pressOutFrameOneRef.current = null;
+    pressOutFrameTwoRef.current = null;
+    releaseContinuationRef.current = undefined;
+  }, []);
 
-  useEffect(() => {
-    return () => {
-      cancelPendingFrames();
-      pressAnimation.current?.stop();
-      releaseAnimationRef.current?.stop();
-      debouncedPressRef.current.cancel?.();
-    };
-  }, [cancelPendingFrames]);
+  const settleVisuals = useCallback(() => {
+    animatedActive.setValue(0);
+    animatedValue.setValue(0);
+    animatedOpacity.setValue(1);
+    animatedLoading.setValue(0);
+    loadingOpacity.setValue(0);
+    textOpacity.setValue(1);
+    activityOpacity.setValue(0);
+    pressedRef.current = false;
+    releasingRef.current = false;
+  }, [
+    activityOpacity,
+    animatedActive,
+    animatedLoading,
+    animatedOpacity,
+    animatedValue,
+    loadingOpacity,
+    textOpacity,
+  ]);
 
-  const animatePressIn = useCallback(
-    (gestureId: number) => {
-      pressAnimationTokenRef.current += 1;
-      const animationToken = pressAnimationTokenRef.current;
-      pressAnimation.current?.stop();
-      pressingGestureIdRef.current = gestureId;
-      pressedGestureIdRef.current = null;
-      pressed.current = false;
-      pressAnimation.current = Animated.parallel([
-        animateTiming({
-          variable: animatedValue,
-          toValue: 1,
-          duration: ANIMATED_TIMING_OFF,
-        }),
-        animateTiming({
-          variable: animatedActive,
-          toValue: 1,
-          duration: ANIMATED_TIMING_OFF,
-        }),
-        animateTiming({
-          variable: animatedOpacity,
-          toValue: progress ? 1 : activeOpacity,
-          duration: ANIMATED_TIMING_OFF,
-        }),
-      ]);
-
-      pressAnimation.current.start(() => {
-        if (
-          pressAnimationTokenRef.current !== animationToken ||
-          activeGestureIdRef.current !== gestureId ||
-          pressingGestureIdRef.current !== gestureId
-        ) {
-          return;
-        }
-        pressingGestureIdRef.current = null;
-        pressedGestureIdRef.current = gestureId;
-        pressed.current = true;
-        onPressedIn();
-      });
+  useLayoutEffect(
+    () => () => {
+      mountedRef.current = false;
+      activeGestureRef.current = null;
+      releasedGestureRef.current = null;
+      progressRunRef.current = null;
+      stopVisualWork();
     },
-    [
-      activeOpacity,
-      animatedActive,
-      animatedOpacity,
-      animatedValue,
-      onPressedIn,
-      progress,
-    ]
+    [stopVisualWork]
   );
 
-  const animateLoadingStart = useCallback(() => {
-    progressLoadingAnimationRef.current?.stop();
-    animatedLoading.setValue(0);
-    const animation = animateTiming({
-      variable: animatedLoading,
-      toValue: 1,
-      duration: progressLoadingTime,
-    });
+  const finishRelease = useCallback(
+    (
+      snapshot: (() => void) | undefined,
+      continuation: (() => void) | undefined
+    ) => {
+      if (!mountedRef.current) return;
+      releasingRef.current = false;
+      releaseAnimationRef.current = null;
+      pressedRef.current = false;
+      releaseSnapshotRef.current = undefined;
+      releaseContinuationRef.current = undefined;
+      snapshot?.();
+      if (!mountedRef.current) return;
+      continuation?.();
+    },
+    []
+  );
 
-    progressLoadingAnimationRef.current = animation;
-    animation.start(() => {
-      if (progressLoadingAnimationRef.current === animation) {
-        progressLoadingAnimationRef.current = null;
-      }
-    });
-  }, [animatedLoading, progressLoadingTime]);
+  const beginRelease = useCallback(
+    (onPressedOutSnapshot?: () => void, continuation?: () => void) => {
+      if (!mountedRef.current || releasingRef.current) return;
 
-  const animateContentOut = useCallback(() => {
-    progressContentOutAnimationRef.current?.stop();
-    const animation = Animated.parallel([
-      animateTiming({
-        variable: loadingOpacity,
-        toValue: 1,
-      }),
-      animateElastic({
-        variable: textOpacity,
-        toValue: 0,
-      }),
-      animateElastic({
-        variable: activityOpacity,
-        toValue: 1,
-      }),
-    ]);
+      pressAnimationRef.current?.stop();
+      pressAnimationRef.current = null;
+      releasingRef.current = true;
+      releaseSnapshotRef.current = onPressedOutSnapshot;
+      releaseContinuationRef.current = continuation;
+      const live = liveRef.current;
 
-    progressContentOutAnimationRef.current = animation;
-    animation.start(() => {
-      if (progressContentOutAnimationRef.current === animation) {
-        progressContentOutAnimationRef.current = null;
-      }
-    });
-  }, [activityOpacity, loadingOpacity, textOpacity]);
-
-  const animateRelease = useCallback(
-    (releaseGestureId: number | null, callback?: () => void) => {
-      if (releasing.current === true) {
+      if (live.reduceMotion) {
+        settleVisuals();
+        finishRelease(onPressedOutSnapshot, continuation);
         return;
       }
 
-      releaseAnimationTokenRef.current += 1;
-      const animationToken = releaseAnimationTokenRef.current;
-      releasing.current = true;
-      pressAnimation.current?.stop();
-      pressingGestureIdRef.current = null;
-      pressedGestureIdRef.current = null;
-      pressed.current = false;
+      const animation = live.springRelease
+        ? Animated.parallel([
+            animateSpring({ variable: animatedActive, toValue: 0 }),
+            animateSpring({ variable: animatedValue, toValue: 0 }),
+            animateTiming({ variable: animatedOpacity, toValue: 1 }),
+          ])
+        : Animated.parallel([
+            animateTiming({
+              variable: animatedActive,
+              toValue: 0,
+              duration: ANIMATED_TIMING_OFF,
+            }),
+            animateTiming({
+              variable: animatedValue,
+              toValue: 0,
+              duration: ANIMATED_TIMING_OFF,
+            }),
+            animateTiming({ variable: animatedOpacity, toValue: 1 }),
+          ]);
 
-      const finishRelease = () => {
-        if (
-          releasing.current === false ||
-          releaseAnimationTokenRef.current !== animationToken
-        ) {
-          return;
+      releaseAnimationRef.current = animation;
+      animation.start(({ finished }) => {
+        if (finished && releaseAnimationRef.current === animation) {
+          finishRelease(onPressedOutSnapshot, continuation);
         }
-
-        releasing.current = false;
-        releaseAnimationRef.current = null;
-        pressed.current = false;
-        pressingGestureIdRef.current = null;
-        pressedGestureIdRef.current = null;
-        if (
-          releaseGestureId === null ||
-          releaseRequestedForGestureIdRef.current === releaseGestureId
-        ) {
-          releaseRequestedForGestureIdRef.current = null;
-        }
-        callback?.();
-        onPressedOut();
-      };
-
-      const releaseAnimation =
-        springRelease === true
-          ? Animated.parallel([
-              animateSpring({
-                variable: animatedActive,
-                toValue: 0,
-              }),
-              animateSpring({
-                variable: animatedValue,
-                toValue: 0,
-              }),
-              animateTiming({
-                variable: animatedOpacity,
-                toValue: 1,
-              }),
-            ])
-          : Animated.parallel([
-              animateTiming({
-                variable: animatedActive,
-                toValue: 0,
-                duration: ANIMATED_TIMING_OFF,
-              }),
-              animateTiming({
-                variable: animatedValue,
-                toValue: 0,
-                duration: ANIMATED_TIMING_OFF,
-              }),
-              animateTiming({
-                variable: animatedOpacity,
-                toValue: 1,
-              }),
-            ]);
-
-      releaseAnimationRef.current = releaseAnimation;
-      releaseAnimation.start(finishRelease);
+      });
     },
     [
       animatedActive,
       animatedOpacity,
       animatedValue,
-      onPressedOut,
-      springRelease,
+      finishRelease,
+      settleVisuals,
     ]
   );
 
-  const interruptRelease = useCallback(() => {
-    if (releasing.current !== true) {
-      return;
-    }
+  const cancelActiveGesture = useCallback(() => {
+    const active = activeGestureRef.current;
+    if (active === null) return;
 
-    releaseAnimationTokenRef.current += 1;
+    activeGestureRef.current = null;
+    const onPressedOutSnapshot = liveRef.current.onPressedOut;
+    if (pressedRef.current) beginRelease(onPressedOutSnapshot);
+  }, [beginRelease]);
+
+  useEffect(() => {
+    if (options.disabled || !options.hasChildren) cancelActiveGesture();
+  }, [cancelActiveGesture, options.disabled, options.hasChildren]);
+
+  useEffect(() => {
+    if (!options.reduceMotion) return;
+
+    pressAnimationRef.current?.stop();
     releaseAnimationRef.current?.stop();
-    releaseAnimationRef.current = null;
-    releasing.current = false;
-    pressed.current = false;
-  }, []);
+    progressAnimationRef.current?.stop();
 
-  const requestNonProgressReleaseReconcile = useCallback(() => {
-    if (progress === true) {
-      return;
+    if (busyRef.current) {
+      animatedLoading.setValue(options.showProgressBar ? 1 : 0);
+      loadingOpacity.setValue(options.showProgressBar ? 1 : 0);
+      textOpacity.setValue(0);
+      activityOpacity.setValue(1);
+    } else if (pressedRef.current) {
+      animatedValue.setValue(1);
+      animatedActive.setValue(1);
+      animatedOpacity.setValue(options.progress ? 1 : options.activeOpacity);
+    } else {
+      const wasReleasing = releasingRef.current;
+      const snapshot = releaseSnapshotRef.current;
+      const continuation = releaseContinuationRef.current;
+      settleVisuals();
+      if (wasReleasing) finishRelease(snapshot, continuation);
     }
+  }, [
+    activityOpacity,
+    animatedActive,
+    animatedLoading,
+    animatedOpacity,
+    animatedValue,
+    finishRelease,
+    loadingOpacity,
+    options.activeOpacity,
+    options.progress,
+    options.reduceMotion,
+    options.showProgressBar,
+    settleVisuals,
+    textOpacity,
+  ]);
 
-    cancelFrame(nonProgressReleaseReconcileFrameRef.current);
-    nonProgressReleaseReconcileFrameRef.current = requestFrame(() => {
-      nonProgressReleaseReconcileFrameRef.current = null;
-
+  const commitPressedState = useCallback(
+    (gestureId: number) => {
       if (
-        progressing.current === true ||
-        progressStartedRef.current === true ||
-        activeGestureIdRef.current !== null ||
-        releasing.current === true
+        activeGestureRef.current?.id !== gestureId ||
+        !isStructurallyEligible()
+      ) {
+        return false;
+      }
+      pressedRef.current = true;
+      return true;
+    },
+    [isStructurallyEligible]
+  );
+
+  const beginPressVisual = useCallback(
+    (gestureId: number) => {
+      if (
+        activeGestureRef.current?.id !== gestureId ||
+        !isStructurallyEligible()
       ) {
         return;
       }
 
-      const releaseGestureId = releaseRequestedForGestureIdRef.current;
-      const hasVisualPress =
-        pressingGestureIdRef.current !== null ||
-        pressedGestureIdRef.current !== null ||
-        pressed.current === true;
+      releaseAnimationRef.current?.stop();
+      releaseAnimationRef.current = null;
+      releasingRef.current = false;
+      const live = liveRef.current;
+      const duration = live.reduceMotion
+        ? 0
+        : live.pressInAnimationDuration ??
+          live.animationDuration ??
+          ANIMATED_TIMING_OFF;
 
-      if (releaseGestureId === null && hasVisualPress === false) {
+      if (duration === 0) {
+        animatedValue.setValue(1);
+        animatedActive.setValue(1);
+        animatedOpacity.setValue(live.progress ? 1 : live.activeOpacity);
         return;
       }
 
-      animateRelease(
-        releaseGestureId ??
-          pressedGestureIdRef.current ??
-          pressingGestureIdRef.current ??
-          gestureIdRef.current
-      );
-    });
-  }, [animateRelease, progress]);
-
-  const animateProgressEnd = useCallback<ProgressCompletionHandler>(
-    (callback) => {
-      if (progress !== true) {
-        callback?.();
-        return;
-      }
-
-      cancelFrame(progressEndFrameRef.current);
-      stopProgressStartAnimations();
-      progressEndFrameRef.current = requestFrame(() => {
-        progressEndFrameRef.current = null;
+      const easing = live.animationCurve ?? Easing.out(Easing.cubic);
+      const animation = Animated.parallel([
         animateTiming({
-          variable: animatedLoading,
+          variable: animatedValue,
           toValue: 1,
-        }).start(() => {
-          Animated.parallel([
-            animateElastic({
-              variable: textOpacity,
-              toValue: 1,
-            }),
-            animateElastic({
-              variable: activityOpacity,
-              toValue: 0,
-            }),
-            animateTiming({
-              variable: loadingOpacity,
-              toValue: 0,
-              delay: 100,
-            }),
-          ]).start(() => {
-            animateRelease(null, () => {
-              progressing.current = false;
-              progressStartedRef.current = false;
-              setActivity(false);
-              callback?.();
-              onProgressEnd();
+          duration,
+          easing,
+        }),
+        animateTiming({
+          variable: animatedActive,
+          toValue: 1,
+          duration,
+          easing,
+        }),
+        animateTiming({
+          variable: animatedOpacity,
+          toValue: live.progress ? 1 : live.activeOpacity,
+          duration,
+          easing,
+        }),
+      ]);
+      pressAnimationRef.current = animation;
+      animation.start(({ finished }) => {
+        if (finished && pressAnimationRef.current === animation) {
+          pressAnimationRef.current = null;
+        }
+      });
+    },
+    [animatedActive, animatedOpacity, animatedValue, isStructurallyEligible]
+  );
+
+  const handlePressIn = useCallback(
+    (event: GestureResponderEvent) => {
+      const live = liveRef.current;
+      if (!isStructurallyEligible()) {
+        releasedGestureRef.current = 'blocked';
+        return;
+      }
+
+      gestureSequenceRef.current += 1;
+      const gestureId = gestureSequenceRef.current;
+      activeGestureRef.current = { id: gestureId, disposition: 'armed' };
+      releasedGestureRef.current = null;
+
+      live.onPressIn?.(event);
+      if (!commitPressedState(gestureId)) {
+        cancelActiveGesture();
+        return;
+      }
+      Promise.resolve().then(() => {
+        if (!mountedRef.current) return;
+        if (
+          activeGestureRef.current?.id !== gestureId ||
+          !isStructurallyEligible()
+        ) {
+          cancelActiveGesture();
+          return;
+        }
+
+        liveRef.current.onPressedIn?.();
+        if (
+          activeGestureRef.current?.id !== gestureId ||
+          !isStructurallyEligible()
+        ) {
+          cancelActiveGesture();
+          return;
+        }
+
+        beginPressVisual(gestureId);
+      });
+    },
+    [
+      beginPressVisual,
+      cancelActiveGesture,
+      commitPressedState,
+      isStructurallyEligible,
+    ]
+  );
+
+  const handleLongPress = useCallback(
+    (event: GestureResponderEvent) => {
+      const active = activeGestureRef.current;
+      if (
+        active === null ||
+        active.disposition !== 'armed' ||
+        !isStructurallyEligible()
+      ) {
+        return;
+      }
+
+      if (liveRef.current.onPhysicalLongPress(event)) {
+        active.disposition = 'long';
+        if (!mountedRef.current || !isStructurallyEligible()) {
+          cancelActiveGesture();
+        }
+      }
+    },
+    [cancelActiveGesture, isStructurallyEligible]
+  );
+
+  const acceptDebounce = useCallback(() => {
+    const duration = Math.max(
+      0,
+      liveRef.current.debouncedPressTime ?? DEFAULT_DEBOUNCED_PRESS_TIME
+    );
+    const now = Date.now();
+    if (
+      duration > 0 &&
+      lastAcceptedAtRef.current !== null &&
+      now - lastAcceptedAtRef.current < duration
+    ) {
+      return false;
+    }
+    lastAcceptedAtRef.current = now;
+    return true;
+  }, []);
+
+  const finishProgress = useCallback(
+    (run: ProgressRun) => {
+      if (!mountedRef.current || progressRunRef.current !== run) return;
+
+      const completeAfterRelease = () => {
+        if (!mountedRef.current || progressRunRef.current !== run) return;
+        busyRef.current = false;
+        setActivity(false);
+        run.completionSnapshot?.();
+        Promise.resolve().then(() => {
+          if (!mountedRef.current || progressRunRef.current !== run) return;
+          run.onProgressEndSnapshot?.();
+          if (!mountedRef.current || progressRunRef.current !== run) return;
+          progressRunRef.current = null;
+        });
+      };
+
+      const beginFinalRelease = () => {
+        if (!mountedRef.current || progressRunRef.current !== run) return;
+        if (run.physicalLifecycle && pressedRef.current) {
+          beginRelease(liveRef.current.onPressedOut, completeAfterRelease);
+        } else {
+          pressedRef.current = false;
+          animatedValue.setValue(0);
+          animatedActive.setValue(0);
+          animatedOpacity.setValue(1);
+          completeAfterRelease();
+        }
+      };
+
+      const live = liveRef.current;
+      progressAnimationRef.current?.stop();
+      if (live.reduceMotion) {
+        animatedLoading.setValue(live.showProgressBar ? 1 : 0);
+        loadingOpacity.setValue(0);
+        textOpacity.setValue(1);
+        activityOpacity.setValue(0);
+        beginFinalRelease();
+        return;
+      }
+
+      const animation = Animated.sequence([
+        animateTiming({ variable: animatedLoading, toValue: 1, duration: 120 }),
+        Animated.parallel([
+          animateElastic({ variable: textOpacity, toValue: 1 }),
+          animateElastic({ variable: activityOpacity, toValue: 0 }),
+          animateTiming({
+            variable: loadingOpacity,
+            toValue: 0,
+            delay: 120,
+            duration: 160,
+          }),
+        ]),
+      ]);
+      progressAnimationRef.current = animation;
+      animation.start(({ finished }) => {
+        if (finished && progressAnimationRef.current === animation) {
+          progressAnimationRef.current = null;
+          beginFinalRelease();
+        }
+      });
+    },
+    [
+      activityOpacity,
+      animatedLoading,
+      animatedActive,
+      animatedOpacity,
+      animatedValue,
+      beginRelease,
+      loadingOpacity,
+      textOpacity,
+    ]
+  );
+
+  const abortProgress = useCallback(
+    (run: ProgressRun) => {
+      if (progressRunRef.current !== run || run.completionClaimed) {
+        return;
+      }
+      run.completionClaimed = true;
+      const onProgressEndSnapshot = liveRef.current.onProgressEnd;
+      progressAnimationRef.current?.stop();
+      progressAnimationRef.current = null;
+      animatedLoading.setValue(0);
+      loadingOpacity.setValue(0);
+      textOpacity.setValue(1);
+      activityOpacity.setValue(0);
+      const finishRollback = () => {
+        if (!mountedRef.current || progressRunRef.current !== run) return;
+        busyRef.current = false;
+        setActivity(false);
+        onProgressEndSnapshot?.();
+        if (!mountedRef.current || progressRunRef.current !== run) return;
+        progressRunRef.current = null;
+      };
+      if (run.physicalLifecycle && pressedRef.current) {
+        beginRelease(liveRef.current.onPressedOut, finishRollback);
+      } else {
+        pressedRef.current = false;
+        animatedValue.setValue(0);
+        animatedActive.setValue(0);
+        animatedOpacity.setValue(1);
+        finishRollback();
+      }
+    },
+    [
+      activityOpacity,
+      animatedActive,
+      animatedLoading,
+      animatedOpacity,
+      animatedValue,
+      beginRelease,
+      loadingOpacity,
+      textOpacity,
+    ]
+  );
+
+  const beginProgress = useCallback(
+    (physicalLifecycle: boolean) => {
+      progressSequenceRef.current += 1;
+      const run: ProgressRun = {
+        id: progressSequenceRef.current,
+        completionClaimed: false,
+        activationDelivered: false,
+        physicalLifecycle,
+      };
+      progressRunRef.current = run;
+      busyRef.current = true;
+      cancelFrame(progressFallbackFrameRef.current);
+      progressFallbackFrameRef.current = null;
+      setActivity(true);
+
+      liveRef.current.onProgressStart?.();
+      if (!mountedRef.current || progressRunRef.current !== run) return null;
+      if (liveRef.current.disabled || !liveRef.current.hasChildren) {
+        abortProgress(run);
+        return null;
+      }
+
+      const live = liveRef.current;
+      if (live.reduceMotion) {
+        animatedLoading.setValue(live.showProgressBar ? 1 : 0);
+        loadingOpacity.setValue(live.showProgressBar ? 1 : 0);
+        textOpacity.setValue(0);
+        activityOpacity.setValue(1);
+      } else {
+        animatedLoading.setValue(0);
+        loadingOpacity.setValue(1);
+        progressAnimationRef.current = Animated.parallel([
+          animateTiming({
+            variable: animatedLoading,
+            toValue: 1,
+            duration: live.progressLoadingTime,
+            easing: Easing.linear,
+          }),
+          animateElastic({ variable: textOpacity, toValue: 0 }),
+          animateElastic({ variable: activityOpacity, toValue: 1 }),
+        ]);
+        progressAnimationRef.current.start();
+      }
+
+      const next: ProgressCompletionHandler = (completion) => {
+        if (
+          !mountedRef.current ||
+          progressRunRef.current !== run ||
+          run.completionClaimed
+        ) {
+          return;
+        }
+        run.completionClaimed = true;
+        run.completionSnapshot = completion;
+        run.onProgressEndSnapshot = liveRef.current.onProgressEnd;
+        progressCompletionFrameRef.current = requestFrame(() => {
+          progressCompletionFrameRef.current = null;
+          finishProgress(run);
+        });
+      };
+
+      return { next, run };
+    },
+    [
+      activityOpacity,
+      animatedLoading,
+      abortProgress,
+      finishProgress,
+      loadingOpacity,
+      textOpacity,
+    ]
+  );
+
+  const dispatchOrdinaryActivation = useCallback(
+    (physicalLifecycle: boolean) => {
+      const live = liveRef.current;
+      if (!isStructurallyEligible() || live.onPress === undefined) return false;
+      if (!acceptDebounce()) return false;
+
+      const progressOwnership = live.progress
+        ? beginProgress(physicalLifecycle)
+        : null;
+      activationFrameOneRef.current = requestFrame(() => {
+        activationFrameOneRef.current = null;
+        activationFrameTwoRef.current = requestFrame(() => {
+          activationFrameTwoRef.current = null;
+          requestFrame(() => {
+            const current = liveRef.current;
+            if (
+              !mountedRef.current ||
+              current.disabled ||
+              !current.hasChildren ||
+              current.onPress === undefined
+            ) {
+              if (progressOwnership !== null) {
+                abortProgress(progressOwnership.run);
+              }
+              return;
+            }
+
+            if (progressOwnership !== null) {
+              current.onPress(progressOwnership.next);
+              if (progressRunRef.current === progressOwnership.run) {
+                progressOwnership.run.activationDelivered = true;
+              }
+            } else {
+              current.onPress();
+            }
+          });
+        });
+      });
+      return true;
+    },
+    [abortProgress, acceptDebounce, beginProgress, isStructurallyEligible]
+  );
+
+  useEffect(() => {
+    const run = progressRunRef.current;
+    if (
+      run !== null &&
+      run.activationDelivered &&
+      !run.completionClaimed &&
+      (options.disabled || !options.hasChildren)
+    ) {
+      abortProgress(run);
+    }
+  }, [abortProgress, options.disabled, options.hasChildren]);
+
+  const rememberReleasedDisposition = useCallback(
+    (disposition: GestureDisposition) => {
+      releasedGestureRef.current = disposition;
+      cancelFrame(releasedDispositionFrameRef.current);
+      releasedDispositionFrameRef.current = requestFrame(() => {
+        releasedDispositionFrameRef.current = null;
+        releasedGestureRef.current = null;
+      });
+    },
+    []
+  );
+
+  const handlePressOut = useCallback(
+    (event: GestureResponderEvent) => {
+      const active = activeGestureRef.current;
+      if (active === null) return;
+
+      activeGestureRef.current = null;
+      rememberReleasedDisposition(active.disposition);
+      const onPressedOutSnapshot = liveRef.current.onPressedOut;
+      event.persist?.();
+      pressOutFrameOneRef.current = requestFrame(() => {
+        pressOutFrameOneRef.current = null;
+        pressOutFrameTwoRef.current = requestFrame(() => {
+          pressOutFrameTwoRef.current = null;
+          requestFrame(() => {
+            if (!mountedRef.current) return;
+            liveRef.current.onPressOut?.(event);
+            Promise.resolve().then(() => {
+              if (!mountedRef.current) return;
+
+              if (liveRef.current.progress && active.disposition === 'armed') {
+                if (!busyRef.current && pressedRef.current) {
+                  beginRelease(onPressedOutSnapshot);
+                }
+                return;
+              }
+
+              if (pressedRef.current) {
+                beginRelease(onPressedOutSnapshot);
+              }
             });
           });
         });
       });
     },
-    [
-      activityOpacity,
-      animateRelease,
-      animatedLoading,
-      loadingOpacity,
-      onProgressEnd,
-      progress,
-      textOpacity,
-      stopProgressStartAnimations,
-    ]
+    [beginRelease, rememberReleasedDisposition]
   );
-
-  const startProgress = useCallback(() => {
-    progressing.current = true;
-    progressStartedRef.current = true;
-    onProgressStart();
-    setActivity(true);
-    animateLoadingStart();
-    animateContentOut();
-  }, [animateContentOut, animateLoadingStart, onProgressStart]);
-
-  const scheduleProgressFallbackRelease = useCallback(() => {
-    cancelFrame(progressReleaseFrameRef.current);
-    progressReleaseFrameRef.current = requestFrame(() => {
-      progressReleaseFrameRef.current = null;
-
-      if (progressing.current === true || progressStartedRef.current === true) {
-        return;
-      }
-
-      animateRelease(null);
-    });
-  }, [animateRelease]);
-
-  const rollbackProgressPress = useCallback(() => {
-    if (
-      progressStartFrameRef.current !== null &&
-      progressStartedRef.current !== true
-    ) {
-      cancelFrame(progressStartFrameRef.current);
-      progressStartFrameRef.current = null;
-      progressing.current = false;
-      progressStartedRef.current = false;
-      return;
-    }
-
-    stopProgressStartAnimations();
-    progressStartFrameRef.current = null;
-    progressStartedRef.current = false;
-    progressing.current = false;
-    animatedLoading.setValue(0);
-    textOpacity.setValue(1);
-    activityOpacity.setValue(0);
-    loadingOpacity.setValue(0);
-    setActivity(false);
-    animateRelease(null, () => {
-      onProgressEnd();
-    });
-  }, [
-    activityOpacity,
-    animateRelease,
-    animatedLoading,
-    loadingOpacity,
-    onProgressEnd,
-    stopProgressStartAnimations,
-    textOpacity,
-  ]);
-
-  const setActiveGestureDisposition = useCallback(
-    (disposition: PressGestureDisposition) => {
-      clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
-      releasedGestureClearTimeoutRef.current = null;
-      releasedGestureDispositionRef.current = 'idle';
-      activeGestureDispositionRef.current = disposition;
-    },
-    []
-  );
-
-  const consumeGestureDisposition = useCallback(() => {
-    const disposition =
-      releasedGestureDispositionRef.current !== 'idle'
-        ? releasedGestureDispositionRef.current
-        : activeGestureDispositionRef.current;
-
-    activeGestureDispositionRef.current = 'idle';
-    releasedGestureDispositionRef.current = 'idle';
-    clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
-    releasedGestureClearTimeoutRef.current = null;
-
-    return disposition;
-  }, []);
-
-  const finalizeGestureDisposition = useCallback(() => {
-    const disposition = activeGestureDispositionRef.current;
-
-    if (disposition === 'idle') {
-      return;
-    }
-
-    activeGestureDispositionRef.current = 'idle';
-    releasedGestureDispositionRef.current = disposition;
-    clearTimeout(releasedGestureClearTimeoutRef.current ?? undefined);
-    releasedGestureClearTimeoutRef.current = setTimeout(() => {
-      releasedGestureClearTimeoutRef.current = null;
-      releasedGestureDispositionRef.current = 'idle';
-    }, 0);
-  }, []);
-
-  const invokePressAction = useCallback(
-    (next?: ProgressCompletionHandler, onAbort?: () => void) => {
-      const lifecycleToken = pressActionLifecycleTokenRef.current;
-
-      frameThrower(PRESS_ACTION_FRAME_THROW).then(() => {
-        if (pressActionLifecycleTokenRef.current !== lifecycleToken) {
-          return;
-        }
-
-        if (disabledRef.current === true || hasChildrenRef.current === false) {
-          onAbort?.();
-          return;
-        }
-
-        debouncedPress(next);
-      });
-    },
-    [debouncedPress]
-  );
-
-  const invokePressOutObserver = useCallback((event: GestureResponderEvent) => {
-    event.persist?.();
-    const lifecycleToken = pressOutObserverLifecycleTokenRef.current;
-
-    frameThrower(PRESS_OUT_OBSERVER_FRAME_THROW).then(() => {
-      if (pressOutObserverLifecycleTokenRef.current !== lifecycleToken) {
-        return;
-      }
-
-      if (disabledRef.current === true || hasChildrenRef.current === false) {
-        return;
-      }
-
-      onPressOutRef.current(event);
-    });
-  }, []);
 
   const handlePress = useCallback(() => {
-    const gestureDisposition = consumeGestureDisposition();
-
-    if (gestureDisposition === 'blocked') {
-      return;
+    cancelFrame(releasedDispositionFrameRef.current);
+    releasedDispositionFrameRef.current = null;
+    const disposition = releasedGestureRef.current;
+    releasedGestureRef.current = null;
+    if (disposition === 'blocked' || disposition === 'long') return;
+    const physicalLifecycle =
+      disposition !== null || activeGestureRef.current !== null;
+    if (activeGestureRef.current !== null && !liveRef.current.progress) {
+      activeGestureRef.current = null;
+      if (pressedRef.current) beginRelease(liveRef.current.onPressedOut);
     }
+    dispatchOrdinaryActivation(physicalLifecycle);
+  }, [beginRelease, dispatchOrdinaryActivation]);
 
-    if (gestureDisposition === 'idle' && releasing.current === true) {
-      return;
-    }
+  const handleAtomicPress = useCallback(() => {
+    dispatchOrdinaryActivation(false);
+  }, [dispatchOrdinaryActivation]);
 
-    if (
-      disabled === true ||
-      hasChildren === false ||
-      progressing.current === true
-    ) {
-      return;
-    }
-
-    if (progress === true) {
-      cancelFrame(progressReleaseFrameRef.current);
-      progressReleaseFrameRef.current = null;
-      progressing.current = true;
-      cancelFrame(progressStartFrameRef.current);
-      progressStartFrameRef.current = requestFrame(() => {
-        progressStartFrameRef.current = null;
-        startProgress();
-      });
-      invokePressAction(animateProgressEnd, rollbackProgressPress);
-      return;
-    }
-
-    if (activeGestureIdRef.current !== null) {
-      releaseRequestedForGestureIdRef.current = activeGestureIdRef.current;
-      activeGestureIdRef.current = null;
-      requestNonProgressReleaseReconcile();
-    }
-
-    invokePressAction();
-  }, [
-    consumeGestureDisposition,
-    animateProgressEnd,
-    disabled,
-    hasChildren,
-    invokePressAction,
-    progress,
-    requestNonProgressReleaseReconcile,
-    rollbackProgressPress,
-    startProgress,
-  ]);
-
-  const handlePressIn = useCallback(
-    (event: GestureResponderEvent) => {
-      cancelFrame(progressReleaseFrameRef.current);
-      progressReleaseFrameRef.current = null;
-      cancelFrame(nonProgressReleaseReconcileFrameRef.current);
-      nonProgressReleaseReconcileFrameRef.current = null;
-
-      if (
-        disabled !== true &&
-        hasChildren === true &&
-        releasing.current === true &&
-        progressing.current === false &&
-        pressed.current === false
-      ) {
-        interruptRelease();
-      }
-
-      if (
-        disabled === true ||
-        hasChildren === false ||
-        progressing.current === true
-      ) {
-        if (progressing.current === true) {
-          setActiveGestureDisposition('blocked');
-        }
-
-        return;
-      }
-
-      setActiveGestureDisposition('armed');
-      gestureIdRef.current += 1;
-      activeGestureIdRef.current = gestureIdRef.current;
-      releaseRequestedForGestureIdRef.current = null;
-      onPressIn(event);
-      animatePressIn(gestureIdRef.current);
+  const handleAtomicLongPress = useCallback(
+    (callback?: () => void) => {
+      if (!isStructurallyEligible() || callback === undefined) return false;
+      callback();
+      return true;
     },
-    [
-      animatePressIn,
-      disabled,
-      hasChildren,
-      interruptRelease,
-      onPressIn,
-      setActiveGestureDisposition,
-    ]
-  );
-
-  const handlePressOut = useCallback(
-    (event: GestureResponderEvent) => {
-      if (disabled === true || hasChildren === false) {
-        return;
-      }
-
-      const releaseGestureId =
-        activeGestureIdRef.current ??
-        (gestureIdRef.current > 0 ? gestureIdRef.current : null);
-
-      activeGestureIdRef.current = null;
-      invokePressOutObserver(event);
-      finalizeGestureDisposition();
-
-      if (releasing.current === true) {
-        if (progress !== true && releaseGestureId !== null) {
-          releaseRequestedForGestureIdRef.current = releaseGestureId;
-          requestNonProgressReleaseReconcile();
-        }
-        return;
-      }
-
-      if (progress === true && progressing.current === true) {
-        return;
-      }
-
-      if (progress === true) {
-        scheduleProgressFallbackRelease();
-        return;
-      }
-
-      if (releaseGestureId === null) {
-        requestNonProgressReleaseReconcile();
-        return;
-      }
-
-      releaseRequestedForGestureIdRef.current = releaseGestureId;
-      animateRelease(releaseGestureId);
-    },
-    [
-      animateRelease,
-      disabled,
-      finalizeGestureDisposition,
-      hasChildren,
-      invokePressOutObserver,
-      progress,
-      requestNonProgressReleaseReconcile,
-      scheduleProgressFallbackRelease,
-    ]
+    [isStructurallyEligible]
   );
 
   return {
     activity,
+    handleAtomicLongPress,
+    handleAtomicPress,
+    handleLongPress,
     handlePress,
     handlePressIn,
     handlePressOut,

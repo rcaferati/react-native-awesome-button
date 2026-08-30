@@ -42,6 +42,7 @@ const EXPECTED_VARIANTS = [
   'secondary',
   'twitter',
   'whatsapp',
+  'x',
   'youtube',
 ];
 
@@ -97,11 +98,7 @@ describe('theme helpers', () => {
   it('interpolates colors across hex and rgba values', () => {
     expect(interpolateColors('#000000', '#ffffff', 0.5)).toBe('#808080');
     expect(
-      interpolateColors(
-        'rgba(0, 0, 0, 0.2)',
-        'rgba(255, 255, 255, 0.8)',
-        0.5
-      )
+      interpolateColors('rgba(0, 0, 0, 0.2)', 'rgba(255, 255, 255, 0.8)', 0.5)
     ).toBe('rgba(128, 128, 128, 0.5)');
   });
 
@@ -189,6 +186,17 @@ describe('theme helpers', () => {
     expect(getFaceBackground(component)).toBe('#4688C5');
   });
 
+  it('falls back to package defaults when both requested and primary styles are absent', () => {
+    const basic = getTheme(0);
+    const component = createThemedButton(
+      <ThemedButton config={{ ...basic, buttons: {} }} type="danger">
+        Fallback
+      </ThemedButton>
+    );
+
+    expect(getFaceBackground(component)).toBe('#c0c0c0');
+  });
+
   it('makes themed transparent buttons visually transparent while keeping feedback layers', () => {
     const component = createThemedButton(
       <ThemedButton transparent>Transparent</ThemedButton>
@@ -229,6 +237,29 @@ describe('theme helpers', () => {
     });
 
     expect(getFaceBackground(component)).toBe('#FFF');
+  });
+
+  it('leaves direct themed style changes to animationDuration when no theme transition owns the frames', () => {
+    const component = createThemedButton(
+      <ThemedButton
+        buttonStyle={{ backgroundColor: '#000000', animationDuration: 480 }}
+      >
+        Styled
+      </ThemedButton>
+    );
+    runTimedTransition.mockClear();
+
+    act(() => {
+      component.update(
+        <ThemedButton
+          buttonStyle={{ backgroundColor: '#ffffff', animationDuration: 480 }}
+        >
+          Styled
+        </ThemedButton>
+      );
+    });
+
+    expect(getLatestTransitionOptions()).toMatchObject({ duration: 480 });
   });
 
   it('updates text and face colors through the transition lifecycle', () => {

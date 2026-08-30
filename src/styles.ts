@@ -1,14 +1,14 @@
-import { StyleSheet, ViewStyle } from 'react-native';
+import { StyleSheet, type ColorValue, type ViewStyle } from 'react-native';
 import type { ButtonWidth } from './types';
 
 type DynamicStyles = {
-  backgroundActive?: string;
-  backgroundColor?: string;
-  backgroundDarker?: string;
-  backgroundPlaceholder?: string;
-  backgroundProgress?: string;
-  backgroundShadow?: string;
-  borderColor?: string;
+  backgroundActive?: ColorValue;
+  backgroundColor?: ColorValue;
+  backgroundDarker?: ColorValue;
+  backgroundPlaceholder?: ColorValue;
+  backgroundProgress?: ColorValue;
+  backgroundShadow?: ColorValue;
+  borderColor?: ColorValue;
   borderRadius?: number;
   borderBottomLeftRadius?: number;
   borderBottomRightRadius?: number;
@@ -19,10 +19,11 @@ type DynamicStyles = {
   paddingHorizontal: number;
   paddingTop: number;
   paddingBottom: number;
+  contentGap?: number;
   raiseLevel: number;
   stretch?: boolean;
   textFontFamily?: string;
-  textColor?: string;
+  textColor?: ColorValue;
   textLineHeight?: number;
   textSize?: number;
   width?: ButtonWidth;
@@ -45,6 +46,7 @@ export const getStyles = ({
   borderWidth,
   height,
   paddingBottom,
+  contentGap,
   paddingHorizontal,
   paddingTop,
   raiseLevel,
@@ -98,6 +100,7 @@ export const getStyles = ({
       paddingBottom,
       paddingTop,
       paddingHorizontal,
+      gap: contentGap,
     },
     shadow: {
       bottom: -raiseLevel / 2,
@@ -134,6 +137,13 @@ export const getStyles = ({
 };
 
 export const styles = StyleSheet.create({
+  minimumTarget: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeBackgroundSuppressed: {
+    opacity: 0,
+  },
   container: {
     backgroundColor: 'transparent',
     zIndex: 10,
