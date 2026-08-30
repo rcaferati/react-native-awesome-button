@@ -54,9 +54,13 @@ export function SaveButton() {
 - fixed-size changes animate with the package's 175 ms size transition
 - auto-width string labels grow and shrink when their measured target width changes
 - with `textTransition` plus auto width:
-  - wider labels grow first, then animate text
-  - narrower labels animate text first, then shrink
-- `animateSize={false}` keeps size changes instant
+  - wider labels start growing immediately and begin text at 30% of the text timeline
+  - narrower labels begin text immediately and start shrinking at 30%
+  - every transient grapheme frame is measured before it is shown, so an unconstrained auto-width label cannot wrap or clip
+- fixed, stretch, and externally constrained transitions stay on one clipped line; stable labels regain normal wrapping after settlement
+- text scrambling uses Unicode grapheme clusters, metric-aware Latin pools, a 7 ms slot stagger, and a native frame clock
+- `animateSize={false}` settles target geometry before text begins; Reduced Motion settles both immediately
+- accessibility keeps exposing the stable target label rather than randomized visual frames
 - fixed-to-auto and auto-to-fixed changes remain instant in `3.1.0`
 
 ```tsx
@@ -287,9 +291,9 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `buttonStyle`                  | `AwesomeButtonStyle`            | `undefined`           | Canonical visual bridge. Its fields win over legacy top-level visual aliases; `animationDuration` owns direct resolved-palette changes and `pressInAnimationDuration` overrides press-down timing. |
 | `textColor`                    | `string`                        | `#FFFFFF`             | Default label text color.                                                                                                                                                                          |
 | `textFontFamily`               | `string`                        | `undefined`           | Optional font family for string labels.                                                                                                                                                            |
-| `textLineHeight`               | `number`                        | `20`                  | Placeholder bar height and string label line-height baseline.                                                                                                                                      |
+| `textLineHeight`               | `number`                        | `20`                  | Placeholder bar height and the resolved line height applied to visible and measured string labels.                                                                                                 |
 | `textSize`                     | `number`                        | `14`                  | Default font size for string labels.                                                                                                                                                               |
-| `textTransition`               | `boolean`                       | `false`               | Enables the built-in scramble/reveal animation for plain string labels. In auto-width mode, wider labels grow first and narrower labels shrink last.                                               |
+| `textTransition`               | `boolean`                       | `false`               | Enables the measured, grapheme-aware scramble/reveal animation for nonempty string-label replacements. Transient frames are one line; Reduced Motion settles immediately.                          |
 | `width`                        | `number \| 'auto' \| null`      | `null`                | Fixed width, measured auto width (`null` / `'auto'`), or pair with `stretch` for full width. Auto-width string labels can now both grow and shrink.                                                |
 | `onPress`                      | `(next?) => void`               | `undefined`           | Main press callback. In `progress` mode it receives the completion handler.                                                                                                                        |
 | `onLongPress`                  | `PressableProps['onLongPress']` | `undefined`           | Deprecated physical-only callback that receives the real press event.                                                                                                                              |
@@ -309,7 +313,7 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | Attribute     | Type                   | Default     | Description                                                                                            |
 | ------------- | ---------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
 | `config`      | `ThemeDefinition`      | `undefined` | Explicit theme object. When provided, it takes precedence over `name` and `index`.                     |
-| `flat`        | `boolean`              | `false`     | Requests the `flat` theme variant when available.                                                      |
+| `flat`        | `boolean`              | `false`     | Requests the `flat` theme variant when available, including while disabled.                            |
 | `index`       | `number \| null`       | `null`      | Theme index used by `getTheme(index)` when `config` and `name` are not provided.                       |
 | `name`        | `ThemeName \| null`    | `null`      | Named built-in theme selector. Falls back safely to `basic` if invalid.                                |
 | `size`        | `ButtonSize`           | `medium`    | Built-in theme size preset: `icon`, `small`, `medium`, or `large`.                                     |

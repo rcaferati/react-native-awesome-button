@@ -220,7 +220,7 @@ export interface AwesomeButtonProps {
   textLineHeight?: number;
   /** Legacy font-size override. @deprecated Move this override into `buttonStyle.textSize`. */
   textSize?: number;
-  /** Whether compatible label replacements use a staggered text transition. */
+  /** Whether distinct nonempty string labels use the measured, grapheme-aware visual transition. */
   textTransition?: boolean;
   /** Requested button width in density-independent pixels or intrinsic mode. */
   width?: ButtonWidth;
@@ -458,7 +458,7 @@ export interface ThemedButtonProps extends AwesomeButtonProps {
   config?: AwesomeButtonThemeDefinition;
   /** Whether the wrapper requests intrinsic width when no explicit width is set. */
   autoWidth?: boolean;
-  /** Whether the disabled-precedence flat variant is requested. */
+  /** Whether the flat visual variant is requested, including while disabled. */
   flat?: boolean;
   /** Optional registered-theme index. */
   index?: number | null;
@@ -468,6 +468,6 @@ export interface ThemedButtonProps extends AwesomeButtonProps {
   size?: ButtonSize;
   /** Whether the themed face and depth colors are made transparent. */
   transparent?: boolean;
-  /** Semantic or social theme variant. */
+  /** Semantic or social theme variant; `flat` stays visually flat while disabled. */
   type?: AwesomeButtonVariant;
 }

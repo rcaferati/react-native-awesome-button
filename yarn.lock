@@ -2506,6 +2506,7 @@ __metadata:
     eslint: "npm:^8.4.1"
     eslint-config-prettier: "npm:^8.5.0"
     eslint-plugin-prettier: "npm:^4.0.0"
+    graphemer: "npm:1.4.0"
     jest: "npm:29.7.0"
     lodash.debounce: "npm:^4.0.8"
     pod-install: "npm:^0.1.0"
@@ -6536,7 +6537,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graphemer@npm:^1.4.0":
+"graphemer@npm:1.4.0, graphemer@npm:^1.4.0":
   version: 1.4.0
   resolution: "graphemer@npm:1.4.0"
   checksum: 10c0/e951259d8cd2e0d196c72ec711add7115d42eb9a8146c8eeda5b8d3ac91e5dd816b9cd68920726d9fd4490368e7ed86e9c423f40db87e2d8dfafa00fa17c3a31

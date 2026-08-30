@@ -10,6 +10,16 @@ export type HeightDimensions = {
 
 export type WidthCommandPort = {
   animateTo: (nextWidth: number, onComplete?: () => void) => void;
+  animateTextTransitionTo: (
+    nextWidth: number,
+    options: {
+      durationMs: number;
+      floor: () => number | null;
+      onComplete?: () => void;
+      onProgress?: (progress: number) => void;
+    }
+  ) => void;
+  cancel: () => void;
   getCurrent: () => number | null;
   setImmediately: (nextWidth: number | null) => void;
   snapshot: (callback: (value: number | null) => void) => void;
@@ -48,7 +58,7 @@ export const getAutoWidthTextFlow = (
   nextWidth: number
 ) => {
   if (currentWidth === null) return 'initial';
-  if (currentWidth === nextWidth) return 'text-only';
+  if (Math.abs(currentWidth - nextWidth) <= 0.5) return 'text-only';
   if (nextWidth > currentWidth) return 'grow-first';
   return 'shrink-last';
 };

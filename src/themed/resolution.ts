@@ -54,7 +54,8 @@ const resolveButtonType = (
   flat: boolean,
   type: AwesomeButtonVariant
 ) => {
-  const requestedType = disabled ? 'disabled' : flat === true ? 'flat' : type;
+  const flatRequested = flat === true || type === 'flat';
+  const requestedType = flatRequested ? 'flat' : disabled ? 'disabled' : type;
 
   if (requestedType === 'x') {
     if (Object.prototype.hasOwnProperty.call(theme.buttons, 'x')) return 'x';

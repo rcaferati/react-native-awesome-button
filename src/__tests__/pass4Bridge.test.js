@@ -829,7 +829,12 @@ describe('Pass 4 React Native bridge', () => {
         .props.onPress();
     });
     const progress = component.root.findByProps({ testID: 'aws-btn-progress' });
-    const transform = progress.props.style[2].transform[0].translateX;
-    expect(transform.__getValue()).toBe(0);
+    const transform = StyleSheet.flatten(progress.parent.props.style)
+      .transform[0].translateX;
+    expect(
+      typeof transform.__getValue === 'function'
+        ? transform.__getValue()
+        : transform
+    ).toBe(0);
   });
 });

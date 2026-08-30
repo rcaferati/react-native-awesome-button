@@ -12,6 +12,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Placeholder from '../Placeholder';
+import type { HiddenMeasurementRequest } from '../size/useAutoWidthTextCoordinator';
 import { getStyles, styles } from '../styles';
 import {
   getHiddenMeasurementContainerStyle,
@@ -24,6 +25,7 @@ type ButtonVisualLayersProps = {
   activityColor: ColorValue;
   activityOpacity: Animated.Value;
   after: ReactNode;
+  alignTextLogicalLeading: boolean;
   animatedActive: Animated.Value;
   animatedLoading: Animated.Value;
   animatedOpacity: Animated.Value;
@@ -51,10 +53,14 @@ type ButtonVisualLayersProps = {
   hasPrimitiveTextChild: boolean;
   hasRenderableChildren: boolean;
   height: number;
-  hiddenMeasurementKey: string | null;
-  hiddenMeasurementText: string | null;
+  measurementRequest: HiddenMeasurementRequest | null;
   loadingOpacity: Animated.Value;
-  onHiddenMeasurementLayout: (event: LayoutChangeEvent) => void;
+  onAfterLayout: (event: LayoutChangeEvent) => void;
+  onBeforeLayout: (event: LayoutChangeEvent) => void;
+  onHiddenMeasurementLayout: (
+    request: HiddenMeasurementRequest,
+    event: LayoutChangeEvent
+  ) => void;
   onVisibleContentLayout: (event: LayoutChangeEvent) => void;
   paddingBottom: number;
   paddingHorizontal: number;
@@ -72,6 +78,7 @@ type ButtonVisualLayersProps = {
   textLineHeight: number;
   textOpacity: Animated.Value;
   textSize: number;
+  transientTextFrame: boolean;
   width: number | null;
 };
 
@@ -80,6 +87,7 @@ const ButtonVisualLayers = ({
   activityColor,
   activityOpacity,
   after,
+  alignTextLogicalLeading,
   animatedActive,
   animatedLoading,
   animatedOpacity,
@@ -107,9 +115,10 @@ const ButtonVisualLayers = ({
   hasPrimitiveTextChild,
   hasRenderableChildren,
   height,
-  hiddenMeasurementKey,
-  hiddenMeasurementText,
+  measurementRequest,
   loadingOpacity,
+  onAfterLayout,
+  onBeforeLayout,
   onHiddenMeasurementLayout,
   onVisibleContentLayout,
   paddingBottom,
@@ -128,6 +137,7 @@ const ButtonVisualLayers = ({
   textLineHeight,
   textOpacity,
   textSize,
+  transientTextFrame,
   width,
 }: ButtonVisualLayersProps) => {
   const dynamicStyles = useMemo(
@@ -254,11 +264,12 @@ const ButtonVisualLayers = ({
     () =>
       getHiddenMeasurementContainerStyle({
         borderWidth,
+        contentGap,
         paddingBottom,
         paddingHorizontal,
         paddingTop,
       }),
-    [borderWidth, paddingBottom, paddingHorizontal, paddingTop]
+    [borderWidth, contentGap, paddingBottom, paddingHorizontal, paddingTop]
   );
   const hiddenMeasurementTextStyle = useMemo(
     () =>
@@ -277,14 +288,19 @@ const ButtonVisualLayers = ({
       <>
         {showProgressBar ? (
           <Animated.View
-            testID="aws-btn-progress"
-            style={[
-              styles.progress,
-              dynamicStyles.progress,
-              animatedValues.animatedProgress,
-              sizeAnimatedStyles.progress,
-            ]}
-          />
+            pointerEvents="none"
+            style={[styles.motionLayer, animatedValues.animatedProgress]}
+          >
+            <Animated.View
+              testID="aws-btn-progress"
+              style={[
+                styles.progress,
+                dynamicStyles.progress,
+                null,
+                sizeAnimatedStyles.progress,
+              ]}
+            />
+          </Animated.View>
         ) : null}
         <Animated.View
           testID="aws-btn-activity-indicator"
@@ -317,7 +333,10 @@ const ButtonVisualLayers = ({
       <Text
         testID="aws-btn-content-text"
         style={[styles.container__text, dynamicStyles.container__text]}
+        accessible={false}
         allowFontScaling
+        ellipsizeMode={transientTextFrame ? 'clip' : undefined}
+        numberOfLines={transientTextFrame ? 1 : undefined}
       >
         {typeof children === 'string' ? displayedText ?? children : children}
       </Text>
@@ -330,16 +349,26 @@ const ButtonVisualLayers = ({
         style={[
           styles.container__view,
           dynamicStyles.container__view,
+          alignTextLogicalLeading ? styles.container__viewLogicalLeading : null,
           animatedTextStyle,
         ]}
       >
-        {before}
+        {before !== null && before !== undefined ? (
+          <View collapsable={false} onLayout={onBeforeLayout}>
+            {before}
+          </View>
+        ) : null}
         {content}
-        {after}
+        {after !== null && after !== undefined ? (
+          <View collapsable={false} onLayout={onAfterLayout}>
+            {after}
+          </View>
+        ) : null}
       </Animated.View>
     );
   }, [
     after,
+    alignTextLogicalLeading,
     animatedPlaceholder,
     animatedTextStyle,
     before,
@@ -350,96 +379,136 @@ const ButtonVisualLayers = ({
     dynamicStyles.container__view,
     hasPrimitiveTextChild,
     hasRenderableChildren,
+    onAfterLayout,
+    onBeforeLayout,
     reduceMotion,
+    transientTextFrame,
   ]);
   const suppressProgressDarkening = progress && activity && !showProgressBar;
 
   return (
-    <Animated.View
-      testID="aws-btn-content-2"
-      style={[
-        styles.container,
-        dynamicStyles.container,
-        animatedValues.animatedContainer,
-        sizeAnimatedStyles.container,
-        style,
-        containerStyle,
-      ]}
-    >
+    <Animated.View style={animatedValues.animatedContainer}>
       <Animated.View
-        testID="aws-btn-shadow"
+        testID="aws-btn-content-2"
         style={[
-          styles.shadow,
-          dynamicStyles.shadow,
-          animatedValues.animatedShadow,
-          sizeAnimatedStyles.shadow,
-        ]}
-      />
-      <Animated.View
-        testID="aws-btn-bottom"
-        style={[styles.bottom, dynamicStyles.bottom, sizeAnimatedStyles.bottom]}
-      />
-      <Animated.View
-        testID="aws-btn-content"
-        style={[
-          styles.content,
-          dynamicStyles.content,
-          animatedValues.animatedContent,
-          sizeAnimatedStyles.content,
+          styles.container,
+          dynamicStyles.container,
+          null,
+          sizeAnimatedStyles.container,
+          style,
+          containerStyle,
         ]}
       >
-        <View
-          testID="aws-btn-text"
-          style={[styles.text, dynamicStyles.text]}
-          onLayout={onVisibleContentLayout}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.motionLayer, animatedValues.animatedShadow]}
         >
-          {extra}
           <Animated.View
-            testID="aws-btn-active-background"
+            testID="aws-btn-shadow"
             style={[
-              styles.activeBackground,
-              dynamicStyles.activeBackground,
-              animatedValues.animatedActive,
-              sizeAnimatedStyles.activeBackground,
-              suppressProgressDarkening
-                ? styles.activeBackgroundSuppressed
-                : null,
+              styles.shadow,
+              dynamicStyles.shadow,
+              null,
+              sizeAnimatedStyles.shadow,
             ]}
           />
-          {renderContent}
-          {renderActivity}
-        </View>
-      </Animated.View>
-      {hiddenMeasurementText !== null ? (
-        <ScrollView
-          testID="aws-btn-hidden-measure-viewport"
-          accessible={false}
-          accessibilityElementsHidden
-          automaticallyAdjustContentInsets={false}
-          contentInsetAdjustmentBehavior="never"
-          horizontal
-          importantForAccessibility="no-hide-descendants"
-          pointerEvents="none"
-          scrollEnabled={false}
-          showsHorizontalScrollIndicator={false}
-          style={styles.hiddenMeasurementViewport}
+        </Animated.View>
+        <Animated.View
+          testID="aws-btn-bottom"
+          style={[
+            styles.bottom,
+            dynamicStyles.bottom,
+            sizeAnimatedStyles.bottom,
+          ]}
+        />
+        <Animated.View
+          style={[styles.motionLayer, animatedValues.animatedContent]}
         >
-          <View
-            key={hiddenMeasurementKey ?? undefined}
-            testID="aws-btn-hidden-measure"
-            style={hiddenMeasurementContainerStyle}
-            onLayout={onHiddenMeasurementLayout}
+          <Animated.View
+            testID="aws-btn-content"
+            style={[
+              styles.content,
+              dynamicStyles.content,
+              null,
+              sizeAnimatedStyles.content,
+            ]}
           >
-            <Text
-              testID="aws-btn-hidden-measure-text"
-              style={hiddenMeasurementTextStyle}
-              allowFontScaling
+            <View
+              testID="aws-btn-text"
+              style={[styles.text, dynamicStyles.text]}
+              onLayout={onVisibleContentLayout}
             >
-              {hiddenMeasurementText}
-            </Text>
-          </View>
-        </ScrollView>
-      ) : null}
+              {extra}
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.motionLayer, animatedValues.animatedActive]}
+              >
+                <Animated.View
+                  testID="aws-btn-active-background"
+                  style={[
+                    styles.activeBackground,
+                    dynamicStyles.activeBackground,
+                    null,
+                    sizeAnimatedStyles.activeBackground,
+                    suppressProgressDarkening
+                      ? styles.activeBackgroundSuppressed
+                      : null,
+                  ]}
+                />
+              </Animated.View>
+              {renderContent}
+              {renderActivity}
+            </View>
+          </Animated.View>
+        </Animated.View>
+        {measurementRequest !== null ? (
+          <ScrollView
+            testID="aws-btn-hidden-measure-viewport"
+            accessible={false}
+            accessibilityElementsHidden
+            automaticallyAdjustContentInsets={false}
+            contentInsetAdjustmentBehavior="never"
+            horizontal
+            importantForAccessibility="no-hide-descendants"
+            pointerEvents="none"
+            scrollEnabled={false}
+            showsHorizontalScrollIndicator={false}
+            style={styles.hiddenMeasurementViewport}
+          >
+            <View
+              key={`${measurementRequest.generation}-${measurementRequest.requestId}`}
+              testID="aws-btn-hidden-measure"
+              style={hiddenMeasurementContainerStyle}
+              onLayout={(event) =>
+                onHiddenMeasurementLayout(measurementRequest, event)
+              }
+            >
+              {measurementRequest.hasBefore ? (
+                <View
+                  testID="aws-btn-hidden-measure-before"
+                  style={{ width: measurementRequest.beforeWidth }}
+                />
+              ) : null}
+              <Text
+                testID="aws-btn-hidden-measure-text"
+                style={hiddenMeasurementTextStyle}
+                accessible={false}
+                allowFontScaling
+                ellipsizeMode="clip"
+                numberOfLines={1}
+              >
+                {measurementRequest.text}
+              </Text>
+              {measurementRequest.hasAfter ? (
+                <View
+                  testID="aws-btn-hidden-measure-after"
+                  style={{ width: measurementRequest.afterWidth }}
+                />
+              ) : null}
+            </View>
+          </ScrollView>
+        ) : null}
+      </Animated.View>
     </Animated.View>
   );
 };

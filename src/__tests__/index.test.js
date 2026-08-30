@@ -120,20 +120,29 @@ describe('AwesomeButton', () => {
     const container = component.root.findByProps({
       testID: 'aws-btn-content-2',
     });
-    const hiddenMeasure = component.root.findByProps({
-      testID: 'aws-btn-hidden-measure',
-    });
-
     expect(container.props.style[1].width).toBeUndefined();
 
     act(() => {
-      hiddenMeasure.props.onLayout({
-        nativeEvent: {
-          layout: {
-            width: 132,
+      component.root
+        .findByProps({ testID: 'aws-btn-hidden-measure' })
+        .props.onLayout({
+          nativeEvent: {
+            layout: {
+              width: 132,
+            },
           },
-        },
-      });
+        });
+    });
+    act(() => {
+      component.root
+        .findByProps({ testID: 'aws-btn-hidden-measure' })
+        .props.onLayout({
+          nativeEvent: {
+            layout: {
+              width: 132,
+            },
+          },
+        });
     });
 
     expect(

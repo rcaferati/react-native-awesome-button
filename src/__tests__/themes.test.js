@@ -6,7 +6,10 @@ import {
   interpolateThemeButtonStyle,
   default as blendColors,
 } from '../themed/colors';
-import { areThemeButtonStylesEqual } from '../themed/resolution';
+import {
+  areThemeButtonStylesEqual,
+  resolveButtonType,
+} from '../themed/resolution';
 import getTheme from '../themed/themes';
 import { runTimedTransition } from '../themed/transition';
 
@@ -164,6 +167,24 @@ describe('theme helpers', () => {
   it('falls back to the basic theme for invalid theme lookups', () => {
     expect(getTheme(999).name).toBe('basic');
     expect(getTheme(null, 'does-not-exist').name).toBe('basic');
+  });
+
+  it('keeps explicitly requested flat styling while disabled', () => {
+    const theme = getTheme(0);
+
+    expect(resolveButtonType(theme, true, true, 'anchor')).toBe('flat');
+    expect(resolveButtonType(theme, true, false, 'flat')).toBe('flat');
+    expect(resolveButtonType(theme, true, false, 'anchor')).toBe('disabled');
+  });
+
+  it('renders a disabled flat themed button without depth paint', () => {
+    const component = createThemedButton(
+      <ThemedButton type="flat" disabled>
+        Flat disabled
+      </ThemedButton>
+    );
+
+    expect(getBottomBackground(component)).toBe('rgba(0, 0, 0, 0)');
   });
 
   it('exposes the exact registered themes, variants, and sizes', () => {

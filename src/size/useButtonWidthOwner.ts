@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { Animated, Easing } from 'react-native';
+import { cancelFrame, requestFrame, type FrameHandle } from '../frameLoop';
 import type { ButtonWidth } from '../types';
 import {
   getWidthMode,
@@ -40,9 +41,11 @@ const useButtonWidthOwner = ({
   const modeRef = useRef<WidthMode>(widthMode);
   const currentValueRef = useRef<number | null>(initialWidth);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const frameRef = useRef<FrameHandle | null>(null);
   const animationTokenRef = useRef(0);
   const isAnimatingRef = useRef(false);
   const didInitializeRef = useRef(false);
+  const mountedRef = useRef(true);
   const liveRef = useRef({ animateSize, reduceMotion });
   const animatedWidth = useRef(new Animated.Value(initialWidth ?? 0)).current;
 
@@ -52,14 +55,25 @@ const useButtonWidthOwner = ({
 
   const setAnimatingFlag = useCallback((value: boolean) => {
     isAnimatingRef.current = value;
-    setIsAnimating(value);
+    if (mountedRef.current) setIsAnimating(value);
   }, []);
+
+  const cancelOwnedAnimation = useCallback(() => {
+    animationTokenRef.current += 1;
+    animationRef.current?.stop();
+    animationRef.current = null;
+    cancelFrame(frameRef.current);
+    frameRef.current = null;
+    setAnimatingFlag(false);
+  }, [setAnimatingFlag]);
 
   const syncStateWidth = useCallback((value: number | null) => {
     currentValueRef.current = value;
-    setStateWidth((currentValue) =>
-      currentValue === value ? currentValue : value
-    );
+    if (mountedRef.current) {
+      setStateWidth((currentValue) =>
+        currentValue === value ? currentValue : value
+      );
+    }
   }, []);
 
   const snapshot = useCallback(
@@ -70,28 +84,23 @@ const useButtonWidthOwner = ({
       }
 
       animatedWidth.stopAnimation((value) => {
-        animationRef.current?.stop();
-        animationRef.current = null;
-        setAnimatingFlag(false);
+        cancelOwnedAnimation();
         const resolvedValue =
           typeof value === 'number' ? value : currentValueRef.current;
         syncStateWidth(resolvedValue);
         callback(resolvedValue);
       });
     },
-    [animatedWidth, setAnimatingFlag, syncStateWidth]
+    [animatedWidth, cancelOwnedAnimation, syncStateWidth]
   );
 
   const setImmediately = useCallback(
     (nextWidth: number | null) => {
-      animationTokenRef.current += 1;
-      animationRef.current?.stop();
-      animationRef.current = null;
-      setAnimatingFlag(false);
+      cancelOwnedAnimation();
       if (nextWidth !== null) animatedWidth.setValue(nextWidth);
       syncStateWidth(nextWidth);
     },
-    [animatedWidth, setAnimatingFlag, syncStateWidth]
+    [animatedWidth, cancelOwnedAnimation, syncStateWidth]
   );
 
   const animateTo = useCallback(
@@ -139,10 +148,127 @@ const useButtonWidthOwner = ({
     [animatedWidth, setAnimatingFlag, setImmediately, snapshot, syncStateWidth]
   );
 
+  const animateTextTransitionTo = useCallback(
+    (
+      nextWidth: number,
+      {
+        durationMs,
+        floor,
+        onComplete,
+        onProgress,
+      }: {
+        durationMs: number;
+        floor: () => number | null;
+        onComplete?: () => void;
+        onProgress?: (progress: number) => void;
+      }
+    ) => {
+      const live = liveRef.current;
+      const normalizedDuration = Number.isFinite(durationMs)
+        ? Math.max(0, durationMs)
+        : 0;
+      if (
+        !live.animateSize ||
+        live.reduceMotion ||
+        currentValueRef.current === null ||
+        normalizedDuration === 0
+      ) {
+        setImmediately(nextWidth);
+        onProgress?.(1);
+        onComplete?.();
+        return;
+      }
+
+      snapshot((snapshotWidth) => {
+        if (snapshotWidth === null) {
+          setImmediately(nextWidth);
+          onProgress?.(1);
+          onComplete?.();
+          return;
+        }
+
+        cancelOwnedAnimation();
+        const animationToken = animationTokenRef.current;
+        const fromWidth = snapshotWidth;
+        let startTimestamp: number | null = null;
+        setStateWidth(nextWidth);
+        currentValueRef.current = fromWidth;
+        animatedWidth.setValue(fromWidth);
+        setAnimatingFlag(true);
+
+        const tick = (timestamp: number) => {
+          if (animationTokenRef.current !== animationToken) return;
+          if (startTimestamp === null) startTimestamp = timestamp;
+          const elapsed = Math.max(0, timestamp - startTimestamp);
+          const progress = Math.min(1, elapsed / normalizedDuration);
+          const easedProgress = SIZE_ANIMATION_EASING(progress);
+          const nominal = fromWidth + (nextWidth - fromWidth) * easedProgress;
+          const currentFloor = floor();
+          const rendered =
+            currentFloor === null ? nominal : Math.max(nominal, currentFloor);
+          currentValueRef.current = rendered;
+          animatedWidth.setValue(rendered);
+          onProgress?.(progress);
+
+          if (animationTokenRef.current !== animationToken) return;
+          if (progress >= 1) {
+            frameRef.current = null;
+            setAnimatingFlag(false);
+            const finalFloor = floor();
+            const finalWidth =
+              finalFloor === null ? nextWidth : Math.max(nextWidth, finalFloor);
+            animatedWidth.setValue(finalWidth);
+            syncStateWidth(finalWidth);
+            onComplete?.();
+            return;
+          }
+          frameRef.current = requestFrame(tick);
+        };
+
+        frameRef.current = requestFrame(tick);
+      });
+    },
+    [
+      animatedWidth,
+      cancelOwnedAnimation,
+      setAnimatingFlag,
+      setImmediately,
+      snapshot,
+      syncStateWidth,
+    ]
+  );
+
   const getCurrent = useCallback(() => currentValueRef.current, []);
+  const cancel = useCallback(() => {
+    if (!isAnimatingRef.current) {
+      cancelOwnedAnimation();
+      return;
+    }
+    animatedWidth.stopAnimation((value) => {
+      cancelOwnedAnimation();
+      if (typeof value === 'number') {
+        animatedWidth.setValue(value);
+        syncStateWidth(value);
+      }
+    });
+  }, [animatedWidth, cancelOwnedAnimation, syncStateWidth]);
   const commands = useMemo<WidthCommandPort>(
-    () => ({ animateTo, getCurrent, setImmediately, snapshot }),
-    [animateTo, getCurrent, setImmediately, snapshot]
+    () => ({
+      animateTextTransitionTo,
+      animateTo,
+      cancel,
+      getCurrent,
+      setImmediately,
+      snapshot,
+    }),
+    [
+      animateTextTransitionTo,
+      animateTo,
+      cancel,
+      getCurrent,
+      setImmediately,
+      snapshot,
+    ]
   );
 
   useLayoutEffect(() => {
@@ -189,9 +315,12 @@ const useButtonWidthOwner = ({
 
   useEffect(
     () => () => {
+      mountedRef.current = false;
       animationTokenRef.current += 1;
       animationRef.current?.stop();
       animationRef.current = null;
+      cancelFrame(frameRef.current);
+      frameRef.current = null;
     },
     []
   );

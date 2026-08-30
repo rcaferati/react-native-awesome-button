@@ -1,5 +1,10 @@
 import React, { useMemo, useRef } from 'react';
-import { Animated, Platform, useWindowDimensions } from 'react-native';
+import {
+  Animated,
+  I18nManager,
+  Platform,
+  useWindowDimensions,
+} from 'react-native';
 import usePressProgressController from './usePressProgressController';
 import useButtonSizeBehavior from './useButtonSizeBehavior';
 import {
@@ -248,14 +253,43 @@ const AwesomeButton = ({
   const animatedOpacity = useRef(
     new Animated.Value(width === null && stretch !== true ? 0 : 1)
   ).current;
+  const textMeasurementSignature = useMemo(
+    () =>
+      JSON.stringify([
+        fontScale,
+        I18nManager.isRTL,
+        normalizedPaddingBottom,
+        normalizedPaddingHorizontal,
+        normalizedPaddingTop,
+        resolvedBorderWidth,
+        resolvedContentGap ?? 0,
+        resolvedTextFontFamily ?? null,
+        normalizedTextLineHeight,
+        resolvedTextSize,
+      ]),
+    [
+      fontScale,
+      normalizedPaddingBottom,
+      normalizedPaddingHorizontal,
+      normalizedPaddingTop,
+      normalizedTextLineHeight,
+      resolvedBorderWidth,
+      resolvedContentGap,
+      resolvedTextFontFamily,
+      resolvedTextSize,
+    ]
+  );
   const {
+    alignTextLogicalLeading,
     displayedText,
-    hiddenMeasurementKey,
-    hiddenMeasurementText,
+    measurementRequest,
+    onAfterLayout,
+    onBeforeLayout,
     onHiddenMeasurementLayout,
     onVisibleContentLayout,
     resolvedWidth,
     sizeAnimatedStyles,
+    transientTextFrame,
   } = useButtonSizeBehavior({
     after,
     animatedOpacity,
@@ -264,6 +298,7 @@ const AwesomeButton = ({
     children,
     extra,
     height: resolvedGeometryHeight,
+    measurementSignature: textMeasurementSignature,
     paddingBottom: normalizedPaddingBottom,
     paddingTop: normalizedPaddingTop,
     raiseLevel: normalizedRaiseAmount,
@@ -336,6 +371,7 @@ const AwesomeButton = ({
         activityColor={resolvedActivityColor}
         activityOpacity={activityOpacity}
         after={after}
+        alignTextLogicalLeading={alignTextLogicalLeading}
         animatedActive={animatedActive}
         animatedLoading={animatedLoading}
         animatedOpacity={animatedOpacity}
@@ -362,9 +398,10 @@ const AwesomeButton = ({
         hasPrimitiveTextChild={hasPrimitiveTextChild}
         hasRenderableChildren={hasRenderableChildren}
         height={resolvedGeometryHeight}
-        hiddenMeasurementKey={hiddenMeasurementKey}
-        hiddenMeasurementText={hiddenMeasurementText}
+        measurementRequest={measurementRequest}
         loadingOpacity={loadingOpacity}
+        onAfterLayout={onAfterLayout}
+        onBeforeLayout={onBeforeLayout}
         onHiddenMeasurementLayout={onHiddenMeasurementLayout}
         onVisibleContentLayout={onVisibleContentLayout}
         paddingBottom={normalizedPaddingBottom}
@@ -383,6 +420,7 @@ const AwesomeButton = ({
         textLineHeight={normalizedTextLineHeight}
         textOpacity={textOpacity}
         textSize={resolvedTextSize}
+        transientTextFrame={transientTextFrame}
         width={width}
       >
         {children}

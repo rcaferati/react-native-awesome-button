@@ -91,6 +91,7 @@ export const getStyles = ({
       color: textColor,
       fontSize: textSize,
       fontFamily: textFontFamily,
+      lineHeight: textLineHeight,
     },
     container__placeholder: {
       height: textLineHeight,
@@ -151,6 +152,9 @@ export const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     opacity: 0,
   },
+  motionLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
   container: {
     backgroundColor: 'transparent',
     zIndex: 10,
@@ -165,6 +169,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  container__viewLogicalLeading: {
+    justifyContent: 'flex-start',
   },
   container__placeholder: {
     width: '55%',

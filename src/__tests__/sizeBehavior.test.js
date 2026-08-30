@@ -183,7 +183,7 @@ describe('AwesomeButton size behavior', () => {
     ).toBe(true);
   });
 
-  it('grows first and shrinks last for auto-width string labels with no text transition', () => {
+  it('settles stable text immediately while animating auto width without text transition', () => {
     const component = createComponent(<AwesomeButton>Open</AwesomeButton>);
     measureHiddenWidth(component, 76);
 
@@ -192,7 +192,7 @@ describe('AwesomeButton size behavior', () => {
     });
 
     measureHiddenWidth(component, 212);
-    expect(getRenderedText(component)).toBe('Open');
+    expect(getRenderedText(component)).toBe('Open analytics dashboard');
 
     act(() => {
       jest.runAllTimers();
@@ -274,6 +274,13 @@ describe('AwesomeButton size behavior', () => {
         lineHeight: 24,
       })
     );
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props.style
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({ lineHeight: 24 })])
+    );
+
+    measureHiddenWidth(component, 84);
 
     act(() => {
       component.update(
@@ -293,6 +300,60 @@ describe('AwesomeButton size behavior', () => {
       component.root.findByProps({ testID: 'aws-btn-hidden-measure-text' })
         .props.children
     ).toBe('Open analytics dashboard');
+  });
+
+  it('measures auxiliary slots once and reuses numeric widths in hidden rows', () => {
+    const component = createComponent(
+      <AwesomeButton
+        buttonStyle={{ contentGap: 6 }}
+        before={<Text testID="before-slot">Before</Text>}
+        after={<Text testID="after-slot">After</Text>}
+        extra={<Text testID="extra-slot">Extra</Text>}
+        width="auto"
+      >
+        Open
+      </AwesomeButton>
+    );
+
+    expect(
+      component.root.findAllByProps({ testID: 'aws-btn-hidden-measure' })
+    ).toHaveLength(0);
+
+    act(() => {
+      component.root
+        .findByProps({ testID: 'before-slot' })
+        .parent.props.onLayout({
+          nativeEvent: { layout: { width: 18 } },
+        });
+      component.root
+        .findByProps({ testID: 'after-slot' })
+        .parent.props.onLayout({
+          nativeEvent: { layout: { width: 24 } },
+        });
+    });
+
+    const measurement = component.root.findByProps({
+      testID: 'aws-btn-hidden-measure',
+    });
+    expect(measurement.props.style).toEqual(
+      expect.objectContaining({ gap: 6 })
+    );
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-hidden-measure-before' })
+        .props.style
+    ).toEqual({ width: 18 });
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-hidden-measure-after' })
+        .props.style
+    ).toEqual({ width: 24 });
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-hidden-measure-before' })
+        .props.children
+    ).toBeUndefined();
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-hidden-measure-after' })
+        .props.children
+    ).toBeUndefined();
   });
 
   it('keeps auto-width changes instant when animateSize is disabled', () => {
@@ -337,6 +398,7 @@ describe('AwesomeButton size behavior', () => {
         component.root.findByProps({ testID: 'aws-btn-hidden-measure' })
       ).toBeDefined();
 
+      measureHiddenWidth(component, 84);
       measureHiddenWidth(component, 84);
 
       expect(

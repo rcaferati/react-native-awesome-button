@@ -1,13 +1,17 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import AwesomeButton from '../Button';
 import {
   buildTextTransitionFrame,
+  buildTextTransitionFrameWithStagger,
   getRandomTransitionCharacter,
+  getTextTransitionCharset,
+  getTextTransitionCollapseMs,
   getTextTransitionRandomizeStartMs,
   getTextTransitionTimeline,
   runTextTransition,
+  splitTextGraphemes,
 } from '../textTransition';
 
 jest.mock('../helpers', () => {
@@ -36,6 +40,47 @@ const createButton = (element) => {
   });
 
   return component;
+};
+
+const measureHiddenText = (component, width = 200) => {
+  const measurements = component.root.findAllByProps({
+    testID: 'aws-btn-hidden-measure',
+  });
+  if (measurements.length === 0) return false;
+
+  act(() => {
+    measurements[0].props.onLayout({
+      nativeEvent: { layout: { width } },
+    });
+  });
+
+  return true;
+};
+
+const layoutVisibleFace = (component, width) => {
+  act(() => {
+    component.root.findByProps({ testID: 'aws-btn-text' }).props.onLayout({
+      nativeEvent: { layout: { width } },
+    });
+  });
+};
+
+const settleInitialAutoLabel = (component, width) => {
+  expect(measureHiddenText(component, width)).toBe(true);
+  expect(measureHiddenText(component, width)).toBe(true);
+  layoutVisibleFace(component, width);
+};
+
+const getRenderedWidth = (component) => {
+  const style = component.root.findByProps({
+    testID: 'aws-btn-content-2',
+  }).props.style;
+  const animatedStyle = style.find(
+    (entry) => entry?.width && typeof entry.width.__getValue === 'function'
+  );
+  return animatedStyle
+    ? animatedStyle.width.__getValue()
+    : StyleSheet.flatten(style).width;
 };
 
 const installAnimationFrameMock = () => {
@@ -70,49 +115,76 @@ describe('text transition helpers', () => {
     restoreAnimationFrame();
   });
 
-  it('preserves spaces while scrambling and uses the correct character pools', () => {
+  it('uses the exact canonical pools and preserves unsupported graphemes', () => {
+    const lowercasePools = ['iljtfr', 'acesuvxznhok', 'mwdbpqgy'];
+    expect([...lowercasePools.join('')].sort().join('')).toBe(
+      [...'abcdefghijklmnopqrstuvwxyz'].sort().join('')
+    );
+    expect(new Set(lowercasePools.join('')).size).toBe(26);
+    expect(getTextTransitionCharset('k')).toBe('acesuvxznhok');
+    expect(getTextTransitionCharset('K')).toBe('ACESUVXZNHOK');
     expect(buildTextTransitionFrame('A a0#', 'B b1?', 20, () => 0.5)[1]).toBe(
       ' '
     );
-    expect(getRandomTransitionCharacter('A', () => 0.4)).toMatch(/[A-Z]/);
-    expect(getRandomTransitionCharacter('z', () => 0.4)).toMatch(/[a-z]/);
+    expect(getRandomTransitionCharacter('A', () => 0.4)).toMatch(
+      /[ACESUVXZNHOK]/
+    );
+    expect(getRandomTransitionCharacter('z', () => 0.4)).toMatch(
+      /[acesuvxznhok]/
+    );
     expect(getRandomTransitionCharacter('4', () => 0.4)).toMatch(/[0-9]/);
     expect(getRandomTransitionCharacter('#', () => 0.4)).toMatch(/[#%&^+=-]/);
+    ['é', 'e\u0301', '?', 'م', 'ש', '👨‍👩‍👧‍👦'].forEach((grapheme) => {
+      expect(getRandomTransitionCharacter(grapheme, () => 0.4)).toBe(grapheme);
+    });
   });
 
-  it('randomizes current slots first, expands, then collapses left-to-right', () => {
+  it('indexes Unicode grapheme clusters rather than UTF-16 code units', () => {
+    expect(splitTextGraphemes('e\u0301👨‍👩‍👧‍👦🇧🇷')).toEqual(['e\u0301', '👨‍👩‍👧‍👦', '🇧🇷']);
+    expect(getTextTransitionTimeline('🙂', '👨‍👩‍👧‍👦🇧🇷').targetLength).toBe(2);
+  });
+
+  it('uses the 7 ms timeline and logical growth collapse ordering', () => {
     const timeline = getTextTransitionTimeline('hello', 'welcome2');
 
-    expect(timeline.lastSourceRandomizeStartMs).toBe(20);
-    expect(timeline.lastRandomizeStartMs).toBe(35);
-    expect(timeline.collapseStartMs).toBe(45);
-    expect(getTextTransitionRandomizeStartMs(4, 5, 8)).toBe(20);
-    expect(getTextTransitionRandomizeStartMs(5, 5, 8)).toBe(25);
-    expect(getTextTransitionRandomizeStartMs(7, 5, 8)).toBe(35);
+    expect(timeline.lastSourceRandomizeStartMs).toBe(28);
+    expect(timeline.lastRandomizeStartMs).toBe(49);
+    expect(timeline.collapseStartMs).toBe(59);
+    expect(timeline.totalDurationMs).toBe(108);
+    expect(getTextTransitionRandomizeStartMs(4, 5, 8)).toBe(28);
+    expect(getTextTransitionRandomizeStartMs(5, 5, 8)).toBe(35);
+    expect(getTextTransitionRandomizeStartMs(7, 5, 8)).toBe(49);
 
-    expect(buildTextTransitionFrame('hello', 'welcome2', 24, () => 0)).toHaveLength(
-      5
-    );
-    expect(buildTextTransitionFrame('hello', 'welcome2', 25, () => 0)).toHaveLength(
-      6
-    );
-    expect(buildTextTransitionFrame('hello', 'welcome2', 35, () => 0)).toHaveLength(
-      8
-    );
-    expect(buildTextTransitionFrame('hello', 'welcome2', 44, () => 0)[0]).not.toBe(
-      'w'
-    );
-    expect(buildTextTransitionFrame('hello', 'welcome2', 45, () => 0)[0]).toBe(
+    expect(
+      buildTextTransitionFrame('hello', 'welcome2', 34, () => 0)
+    ).toHaveLength(5);
+    expect(
+      buildTextTransitionFrame('hello', 'welcome2', 35, () => 0)
+    ).toHaveLength(6);
+    expect(
+      buildTextTransitionFrame('hello', 'welcome2', 49, () => 0)
+    ).toHaveLength(8);
+    expect(
+      buildTextTransitionFrame('hello', 'welcome2', 58, () => 0)[0]
+    ).not.toBe('w');
+    expect(buildTextTransitionFrame('hello', 'welcome2', 59, () => 0)[0]).toBe(
       'w'
     );
   });
 
-  it('keeps trailing source slots until they collapse when the target is shorter', () => {
+  it('removes trailing shrink slots before resolving retained slots', () => {
     const timeline = getTextTransitionTimeline('welcome2', 'go');
 
-    expect(timeline.collapseStartMs).toBe(45);
-    expect(buildTextTransitionFrame('welcome2', 'go', 32, () => 0)).toHaveLength(8);
-    expect(buildTextTransitionFrame('welcome2', 'go', 54, () => 0)).toHaveLength(8);
+    expect(timeline.collapseStartMs).toBe(59);
+    expect(getTextTransitionCollapseMs(7, timeline)).toBe(59);
+    expect(getTextTransitionCollapseMs(6, timeline)).toBe(66);
+    expect(getTextTransitionCollapseMs(0, timeline)).toBe(101);
+    expect(
+      buildTextTransitionFrame('welcome2', 'go', 58, () => 0)
+    ).toHaveLength(8);
+    expect(
+      buildTextTransitionFrame('welcome2', 'go', 59, () => 0)
+    ).toHaveLength(7);
     expect(
       buildTextTransitionFrame(
         'welcome2',
@@ -121,6 +193,20 @@ describe('text transition helpers', () => {
         () => 0
       )
     ).toBe('go');
+  });
+
+  it('supports a zero stagger without division or scheduling failure', () => {
+    const timeline = getTextTransitionTimeline('Save', 'Open', 0);
+    expect(timeline.collapseStartMs).toBe(10);
+    expect(timeline.totalDurationMs).toBe(10);
+    expect(
+      buildTextTransitionFrameWithStagger({
+        fromText: 'Save',
+        targetText: 'Open',
+        elapsedMs: 10,
+        slotStaggerMs: 0,
+      })
+    ).toBe('Open');
   });
 
   it('stops a running transition when interrupted', () => {
@@ -194,19 +280,41 @@ describe('AwesomeButton textTransition', () => {
       );
     });
 
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-view' }).props
+        .accessibilityLabel
+    ).toBe('Mission#42');
+
     act(() => {
       jest.advanceTimersByTime(48);
     });
+    expect(measureHiddenText(component)).toBe(true);
 
     expect(getRenderedText(component)).not.toBe('Go#3');
     expect(getRenderedText(component)).not.toBe('Mission#42');
-    expect(getRenderedText(component)).toHaveLength(7);
+    expect(
+      splitTextGraphemes(getRenderedText(component)).length
+    ).toBeGreaterThan(4);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+    ).toEqual(
+      expect.objectContaining({
+        accessible: false,
+        ellipsizeMode: 'clip',
+        numberOfLines: 1,
+      })
+    );
 
     act(() => {
       jest.runAllTimers();
     });
+    expect(measureHiddenText(component)).toBe(true);
 
     expect(getRenderedText(component)).toBe('Mission#42');
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBeUndefined();
   });
 
   it('does not hard truncate shorter targets before the collapse phase finishes', () => {
@@ -227,14 +335,218 @@ describe('AwesomeButton textTransition', () => {
     act(() => {
       jest.advanceTimersByTime(48);
     });
+    expect(measureHiddenText(component)).toBe(true);
 
     expect(getRenderedText(component)).toHaveLength(10);
+    expect(
+      component.root.findAll(
+        (node) =>
+          StyleSheet.flatten(node.props.style)?.justifyContent === 'flex-start'
+      ).length
+    ).toBeGreaterThan(0);
+
+    act(() => {
+      jest.runAllTimers();
+    });
+    expect(measureHiddenText(component)).toBe(true);
+
+    expect(getRenderedText(component)).toBe('Go#3');
+    expect(
+      component.root.findAll(
+        (node) =>
+          StyleSheet.flatten(node.props.style)?.justifyContent === 'flex-start'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('holds an auto-width candidate until the rendered face can fit it', () => {
+    const component = createButton(
+      <AwesomeButton textTransition width="auto">
+        Go
+      </AwesomeButton>
+    );
+    settleInitialAutoLabel(component, 80);
+
+    act(() => {
+      component.update(
+        <AwesomeButton textTransition width="auto">
+          Mission
+        </AwesomeButton>
+      );
+    });
+    expect(measureHiddenText(component, 160)).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(48);
+    });
+    expect(
+      component.root.findAllByProps({ testID: 'aws-btn-hidden-measure-text' })
+    ).toHaveLength(0);
+    act(() => {
+      jest.advanceTimersByTime(16);
+    });
+    const candidate = component.root.findByProps({
+      testID: 'aws-btn-hidden-measure-text',
+    }).props.children;
+    expect(measureHiddenText(component, 120)).toBe(true);
+    expect(getRenderedText(component)).toBe('Go');
+
+    layoutVisibleFace(component, 160);
+    act(() => {
+      jest.advanceTimersByTime(64);
+    });
+
+    expect(getRenderedText(component)).toBe(candidate);
+  });
+
+  it('rejects an obsolete native measurement after target replacement', () => {
+    const component = createButton(
+      <AwesomeButton textTransition width={200}>
+        Alpha
+      </AwesomeButton>
+    );
+
+    act(() => {
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Bravo
+        </AwesomeButton>
+      );
+    });
+    act(() => {
+      jest.advanceTimersByTime(16);
+    });
+    const obsoleteOnLayout = component.root.findByProps({
+      testID: 'aws-btn-hidden-measure',
+    }).props.onLayout;
+
+    act(() => {
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Charlie
+        </AwesomeButton>
+      );
+    });
+    act(() => {
+      obsoleteOnLayout({
+        nativeEvent: { layout: { width: 999 } },
+      });
+    });
+    act(() => {
+      jest.advanceTimersByTime(16);
+    });
+
+    expect(getRenderedText(component)).toBe('Alpha');
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-hidden-measure-text' })
+        .props.children
+    ).not.toBe('Bravo');
+
+    expect(measureHiddenText(component)).toBe(true);
+    act(() => {
+      jest.runAllTimers();
+    });
+    expect(measureHiddenText(component)).toBe(true);
+    expect(getRenderedText(component)).toBe('Charlie');
+  });
+
+  it('settles auto geometry before text when animateSize is disabled', () => {
+    const component = createButton(
+      <AwesomeButton animateSize={false} textTransition width="auto">
+        Go
+      </AwesomeButton>
+    );
+    settleInitialAutoLabel(component, 80);
+
+    act(() => {
+      component.update(
+        <AwesomeButton animateSize={false} textTransition width="auto">
+          Mission
+        </AwesomeButton>
+      );
+    });
+    expect(measureHiddenText(component, 160)).toBe(true);
+
+    expect(getRenderedWidth(component)).toBe(160);
+    expect(getRenderedText(component)).toBe('Go');
+    layoutVisibleFace(component, 160);
+
+    act(() => {
+      jest.advanceTimersByTime(16);
+    });
+    expect(measureHiddenText(component, 150)).toBe(true);
+    expect(getRenderedText(component)).not.toBe('Go');
+  });
+
+  it('never renders a shrinking auto width below the accepted frame floor', () => {
+    const component = createButton(
+      <AwesomeButton textTransition width="auto">
+        Mission
+      </AwesomeButton>
+    );
+    settleInitialAutoLabel(component, 200);
+
+    act(() => {
+      component.update(
+        <AwesomeButton textTransition width="auto">
+          Go
+        </AwesomeButton>
+      );
+    });
+    expect(measureHiddenText(component, 80)).toBe(true);
+    act(() => {
+      jest.advanceTimersByTime(16);
+    });
+    expect(measureHiddenText(component, 190)).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(160);
+    });
+    expect(getRenderedWidth(component)).toBeGreaterThanOrEqual(190);
+
+    act(() => {
+      jest.runAllTimers();
+    });
+    expect(measureHiddenText(component, 80)).toBe(true);
+    expect(getRenderedText(component)).toBe('Go');
+    expect(getRenderedWidth(component)).toBe(80);
+  });
+
+  it('uses clipped single-line fallback after an auto width is externally constrained', () => {
+    const component = createButton(
+      <AwesomeButton textTransition width="auto">
+        Go
+      </AwesomeButton>
+    );
+    settleInitialAutoLabel(component, 80);
+
+    act(() => {
+      component.update(
+        <AwesomeButton textTransition width="auto">
+          Mission control
+        </AwesomeButton>
+      );
+    });
+    expect(measureHiddenText(component, 240)).toBe(true);
+    act(() => {
+      jest.advanceTimersByTime(96);
+    });
+    const constrainedCandidate = component.root.findByProps({
+      testID: 'aws-btn-hidden-measure-text',
+    }).props.children;
+    expect(measureHiddenText(component, 210)).toBe(true);
+    expect(getRenderedText(component)).toBe('Go');
 
     act(() => {
       jest.runAllTimers();
     });
 
-    expect(getRenderedText(component)).toBe('Go#3');
+    expect(getRenderedText(component)).toBe(constrainedCandidate);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+    ).toEqual(
+      expect.objectContaining({ ellipsizeMode: 'clip', numberOfLines: 1 })
+    );
   });
 
   it('keeps unchanged labels stable and swaps non-transition labels only after the width phase they require', () => {
@@ -326,6 +638,7 @@ describe('AwesomeButton textTransition', () => {
     act(() => {
       jest.advanceTimersByTime(48);
     });
+    expect(measureHiddenText(component)).toBe(true);
 
     const midTransitionText = getRenderedText(component);
 
@@ -340,14 +653,83 @@ describe('AwesomeButton textTransition', () => {
     act(() => {
       jest.advanceTimersByTime(16);
     });
+    expect(measureHiddenText(component)).toBe(true);
 
-    expect(midTransitionText).toHaveLength(7);
-    expect(getRenderedText(component)).toHaveLength(7);
+    expect(splitTextGraphemes(midTransitionText).length).toBeGreaterThan(4);
+    expect(splitTextGraphemes(getRenderedText(component))).toHaveLength(
+      splitTextGraphemes(midTransitionText).length
+    );
 
     act(() => {
       jest.runAllTimers();
     });
+    expect(measureHiddenText(component)).toBe(true);
 
     expect(getRenderedText(component)).toBe('Go#3');
+  });
+
+  it('settles without random frames when Reduced Motion is enabled initially', async () => {
+    jest
+      .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+      .mockResolvedValue(true);
+    const component = createButton(
+      <AwesomeButton textTransition width={200}>
+        Alpha
+      </AwesomeButton>
+    );
+    await act(async () => Promise.resolve());
+
+    act(() => {
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Bravo
+        </AwesomeButton>
+      );
+    });
+
+    expect(getRenderedText(component)).toBe('Bravo');
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBeUndefined();
+  });
+
+  it('invalidates an active generation when Reduced Motion changes', async () => {
+    let reduceMotionListener;
+    jest
+      .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+      .mockResolvedValue(false);
+    jest
+      .spyOn(AccessibilityInfo, 'addEventListener')
+      .mockImplementation((_eventName, listener) => {
+        reduceMotionListener = listener;
+        return { remove: jest.fn() };
+      });
+    const component = createButton(
+      <AwesomeButton textTransition width={200}>
+        Alpha
+      </AwesomeButton>
+    );
+    await act(async () => Promise.resolve());
+
+    act(() => {
+      component.update(
+        <AwesomeButton textTransition width={200}>
+          Charlie
+        </AwesomeButton>
+      );
+    });
+    act(() => {
+      jest.advanceTimersByTime(32);
+    });
+    expect(measureHiddenText(component)).toBe(true);
+    expect(getRenderedText(component)).not.toBe('Charlie');
+
+    act(() => {
+      reduceMotionListener(true);
+    });
+
+    expect(getRenderedText(component)).toBe('Charlie');
+    expect(jest.getTimerCount()).toBe(0);
   });
 });

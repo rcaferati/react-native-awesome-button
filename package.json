@@ -59,7 +59,8 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@rcaferati/wac": "1.2.0"
+    "@rcaferati/wac": "1.2.0",
+    "graphemer": "1.4.0"
   },
   "devDependencies": {
     "@arkweid/lefthook": "^0.7.7",

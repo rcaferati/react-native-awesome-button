@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { getAutoWidthTextFlow, getHeightDimensions } from './size/contracts';
 import useAutoWidthTextCoordinator from './size/useAutoWidthTextCoordinator';
+import type { HiddenMeasurementRequest } from './size/useAutoWidthTextCoordinator';
 import useButtonHeightOwner from './size/useButtonHeightOwner';
 import useButtonWidthOwner from './size/useButtonWidthOwner';
 import type { ButtonWidth } from './types';
@@ -30,6 +31,7 @@ type UseButtonSizeBehaviorParams = {
   children: ReactNode;
   extra?: ReactNode;
   height: number;
+  measurementSignature: string;
   paddingBottom: number;
   paddingTop: number;
   raiseLevel: number;
@@ -40,13 +42,19 @@ type UseButtonSizeBehaviorParams = {
 };
 
 type UseButtonSizeBehaviorResult = {
+  alignTextLogicalLeading: boolean;
   displayedText: string | null;
-  hiddenMeasurementKey: string | null;
-  hiddenMeasurementText: string | null;
-  onHiddenMeasurementLayout: (event: LayoutChangeEvent) => void;
+  measurementRequest: HiddenMeasurementRequest | null;
+  onAfterLayout: (event: LayoutChangeEvent) => void;
+  onBeforeLayout: (event: LayoutChangeEvent) => void;
+  onHiddenMeasurementLayout: (
+    request: HiddenMeasurementRequest,
+    event: LayoutChangeEvent
+  ) => void;
   onVisibleContentLayout: (event: LayoutChangeEvent) => void;
   resolvedWidth: number | null;
   sizeAnimatedStyles: SizeAnimatedStyles;
+  transientTextFrame: boolean;
 };
 
 const useButtonSizeBehavior = ({
@@ -57,6 +65,7 @@ const useButtonSizeBehavior = ({
   children,
   extra = null,
   height,
+  measurementSignature,
   paddingBottom,
   paddingTop,
   raiseLevel,
@@ -89,6 +98,7 @@ const useButtonSizeBehavior = ({
     before,
     children,
     extra,
+    measurementSignature,
     reduceMotion,
     textTransition,
     widthCommands: widthOwner.commands,
@@ -195,17 +205,20 @@ export const getHiddenMeasurementTextStyle = ({
 
 export const getHiddenMeasurementContainerStyle = ({
   borderWidth,
+  contentGap,
   paddingBottom,
   paddingHorizontal,
   paddingTop,
 }: {
   borderWidth: number;
+  contentGap?: number;
   paddingBottom: number;
   paddingHorizontal: number;
   paddingTop: number;
 }): StyleProp<ViewStyle> => ({
   alignSelf: 'flex-start',
   borderWidth,
+  gap: contentGap,
   flexDirection: 'row',
   paddingBottom,
   paddingHorizontal,
