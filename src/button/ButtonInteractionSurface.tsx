@@ -52,6 +52,7 @@ type ButtonInteractionSurfaceProps = {
   onPress: () => void;
   onPressIn: (event: GestureResponderEvent) => void;
   onPressOut: (event: GestureResponderEvent) => void;
+  stretch: boolean;
 };
 
 const ButtonInteractionSurface = ({
@@ -71,6 +72,7 @@ const ButtonInteractionSurface = ({
   onPress,
   onPressIn,
   onPressOut,
+  stretch,
 }: ButtonInteractionSurfaceProps) => {
   const {
     accessibilityActions: dangerousAccessibilityActions,
@@ -177,6 +179,7 @@ const ButtonInteractionSurface = ({
         typeof dangerousPressableStyle === 'function'
           ? dangerousPressableStyle(state)
           : dangerousPressableStyle,
+        ...(stretch ? [styles.stretchTarget] : []),
         styles.minimumTarget,
         { minHeight: minimumTarget, minWidth: minimumTarget },
       ]}

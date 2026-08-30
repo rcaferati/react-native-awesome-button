@@ -237,6 +237,26 @@ describe('AwesomeButton size behavior', () => {
     }
   );
 
+  it('assigns stretch width to both the interaction surface and visual layers', () => {
+    const component = createComponent(
+      <AwesomeButton stretch>Full width</AwesomeButton>
+    );
+    const interactionStyle = component.root.findByProps({
+      testID: 'aws-btn-content-view',
+    }).props.style;
+    const interactionStyles =
+      typeof interactionStyle === 'function'
+        ? interactionStyle({ pressed: false })
+        : interactionStyle;
+
+    expect(interactionStyles).toEqual(
+      expect.arrayContaining([expect.objectContaining({ width: '100%' })])
+    );
+    expect(getContainerStyles(component)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ width: '100%' })])
+    );
+  });
+
   it('remeasures changing custom content through the visible layout owner', () => {
     const component = createComponent(
       <AwesomeButton>

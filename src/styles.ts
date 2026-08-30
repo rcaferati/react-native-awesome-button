@@ -137,6 +137,9 @@ export const getStyles = ({
 };
 
 export const styles = StyleSheet.create({
+  stretchTarget: {
+    width: '100%',
+  },
   minimumTarget: {
     alignItems: 'center',
     justifyContent: 'center',

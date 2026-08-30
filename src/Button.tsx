@@ -329,6 +329,7 @@ const AwesomeButton = ({
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      stretch={stretch}
     >
       <ButtonVisualLayers
         activity={activity}
