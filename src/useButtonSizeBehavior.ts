@@ -209,9 +209,7 @@ export const getHiddenMeasurementContainerStyle = ({
   alignSelf: 'flex-start',
   borderWidth,
   flexDirection: 'row',
-  opacity: 0,
   paddingBottom,
   paddingHorizontal,
   paddingTop,
-  position: 'absolute',
 });

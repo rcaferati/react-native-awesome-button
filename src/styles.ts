@@ -147,6 +147,10 @@ export const styles = StyleSheet.create({
   activeBackgroundSuppressed: {
     opacity: 0,
   },
+  hiddenMeasurementViewport: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0,
+  },
   container: {
     backgroundColor: 'transparent',
     zIndex: 10,

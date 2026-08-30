@@ -1,4 +1,5 @@
 import React from 'react';
+import { Animated } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import AwesomeButton from '../Button';
 
@@ -52,6 +53,7 @@ describe('AwesomeButton', () => {
     const element = component.root.findByProps({ testID: 'aws-btn-bottom' });
 
     expect(element.props.style[1].height).toBe(height - raiseLevel);
+    expect(element.type).toBe(Animated.View);
     expect(element.props.testID).toBe('aws-btn-bottom');
   });
 
@@ -115,7 +117,9 @@ describe('AwesomeButton', () => {
       );
     });
 
-    const container = component.root.findByProps({ testID: 'aws-btn-content-2' });
+    const container = component.root.findByProps({
+      testID: 'aws-btn-content-2',
+    });
     const hiddenMeasure = component.root.findByProps({
       testID: 'aws-btn-hidden-measure',
     });

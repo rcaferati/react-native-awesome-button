@@ -87,25 +87,21 @@ exports[`AwesomeButton should render 1`] = `
       testID="aws-btn-shadow"
     />
     <View
+      collapsable={false}
       style={
-        [
-          {
-            "bottom": 0,
-            "left": 0,
-            "position": "absolute",
-          },
-          {
-            "backgroundColor": "#9f9f9f",
-            "borderBottomLeftRadius": undefined,
-            "borderBottomRightRadius": undefined,
-            "borderRadius": 4,
-            "borderTopLeftRadius": undefined,
-            "borderTopRightRadius": undefined,
-            "height": 56,
-            "width": undefined,
-          },
-          null,
-        ]
+        {
+          "backgroundColor": "#9f9f9f",
+          "borderBottomLeftRadius": undefined,
+          "borderBottomRightRadius": undefined,
+          "borderRadius": 4,
+          "borderTopLeftRadius": undefined,
+          "borderTopRightRadius": undefined,
+          "bottom": 0,
+          "height": 56,
+          "left": 0,
+          "position": "absolute",
+          "width": undefined,
+        }
       }
       testID="aws-btn-bottom"
     />
@@ -298,25 +294,21 @@ exports[`AwesomeButton should render a default text children 1`] = `
       testID="aws-btn-shadow"
     />
     <View
+      collapsable={false}
       style={
-        [
-          {
-            "bottom": 0,
-            "left": 0,
-            "position": "absolute",
-          },
-          {
-            "backgroundColor": "#9f9f9f",
-            "borderBottomLeftRadius": undefined,
-            "borderBottomRightRadius": undefined,
-            "borderRadius": 4,
-            "borderTopLeftRadius": undefined,
-            "borderTopRightRadius": undefined,
-            "height": 56,
-            "width": undefined,
-          },
-          null,
-        ]
+        {
+          "backgroundColor": "#9f9f9f",
+          "borderBottomLeftRadius": undefined,
+          "borderBottomRightRadius": undefined,
+          "borderRadius": 4,
+          "borderTopLeftRadius": undefined,
+          "borderTopRightRadius": undefined,
+          "bottom": 0,
+          "height": 56,
+          "left": 0,
+          "position": "absolute",
+          "width": undefined,
+        }
       }
       testID="aws-btn-bottom"
     />
@@ -427,39 +419,62 @@ exports[`AwesomeButton should render a default text children 1`] = `
         </View>
       </View>
     </View>
-    <View
-      onLayout={[Function]}
+    <RCTScrollView
+      accessibilityElementsHidden={true}
+      accessible={false}
+      automaticallyAdjustContentInsets={false}
+      contentInsetAdjustmentBehavior="never"
+      horizontal={true}
+      importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
+      scrollEnabled={false}
+      showsHorizontalScrollIndicator={false}
       style={
         {
-          "alignSelf": "flex-start",
-          "borderWidth": 0,
-          "flexDirection": "row",
+          "bottom": 0,
+          "left": 0,
           "opacity": 0,
-          "paddingBottom": 0,
-          "paddingHorizontal": 16,
-          "paddingTop": 0,
           "position": "absolute",
+          "right": 0,
+          "top": 0,
         }
       }
-      testID="aws-btn-hidden-measure"
+      testID="aws-btn-hidden-measure-viewport"
     >
-      <Text
-        style={
-          {
-            "color": "#FFFFFF",
-            "fontFamily": undefined,
-            "fontSize": 14,
-            "fontWeight": "bold",
-            "lineHeight": 20,
-            "textAlign": "center",
+      <View>
+        <View
+          onLayout={[Function]}
+          style={
+            {
+              "alignSelf": "flex-start",
+              "borderWidth": 0,
+              "flexDirection": "row",
+              "paddingBottom": 0,
+              "paddingHorizontal": 16,
+              "paddingTop": 0,
+            }
           }
-        }
-        testID="aws-btn-hidden-measure-text"
-      >
-        Default
-      </Text>
-    </View>
+          testID="aws-btn-hidden-measure"
+        >
+          <Text
+            allowFontScaling={true}
+            style={
+              {
+                "color": "#FFFFFF",
+                "fontFamily": undefined,
+                "fontSize": 14,
+                "fontWeight": "bold",
+                "lineHeight": 20,
+                "textAlign": "center",
+              }
+            }
+            testID="aws-btn-hidden-measure-text"
+          >
+            Default
+          </Text>
+        </View>
+      </View>
+    </RCTScrollView>
   </View>
 </View>
 `;

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   I18nManager,
+  ScrollView,
   Text,
   View,
   type ColorValue,
@@ -372,7 +373,7 @@ const ButtonVisualLayers = ({
           sizeAnimatedStyles.shadow,
         ]}
       />
-      <View
+      <Animated.View
         testID="aws-btn-bottom"
         style={[styles.bottom, dynamicStyles.bottom, sizeAnimatedStyles.bottom]}
       />
@@ -408,20 +409,34 @@ const ButtonVisualLayers = ({
         </View>
       </Animated.View>
       {hiddenMeasurementText !== null ? (
-        <View
-          key={hiddenMeasurementKey ?? undefined}
-          testID="aws-btn-hidden-measure"
+        <ScrollView
+          testID="aws-btn-hidden-measure-viewport"
+          accessible={false}
+          accessibilityElementsHidden
+          automaticallyAdjustContentInsets={false}
+          contentInsetAdjustmentBehavior="never"
+          horizontal
+          importantForAccessibility="no-hide-descendants"
           pointerEvents="none"
-          style={hiddenMeasurementContainerStyle}
-          onLayout={onHiddenMeasurementLayout}
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          style={styles.hiddenMeasurementViewport}
         >
-          <Text
-            testID="aws-btn-hidden-measure-text"
-            style={hiddenMeasurementTextStyle}
+          <View
+            key={hiddenMeasurementKey ?? undefined}
+            testID="aws-btn-hidden-measure"
+            style={hiddenMeasurementContainerStyle}
+            onLayout={onHiddenMeasurementLayout}
           >
-            {hiddenMeasurementText}
-          </Text>
-        </View>
+            <Text
+              testID="aws-btn-hidden-measure-text"
+              style={hiddenMeasurementTextStyle}
+              allowFontScaling
+            >
+              {hiddenMeasurementText}
+            </Text>
+          </View>
+        </ScrollView>
       ) : null}
     </Animated.View>
   );

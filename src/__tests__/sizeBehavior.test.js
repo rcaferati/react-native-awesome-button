@@ -40,6 +40,9 @@ const createComponent = (element) => {
 const getContainerStyles = (component) =>
   component.root.findByProps({ testID: 'aws-btn-content-2' }).props.style;
 
+const getLayerStyles = (component, testID) =>
+  component.root.findByProps({ testID }).props.style;
+
 const getRenderedText = (component) =>
   component.root.findByProps({ testID: 'aws-btn-content-text' }).props.children;
 
@@ -98,6 +101,16 @@ describe('AwesomeButton size behavior', () => {
     expect(animatedStyle).toBeDefined();
     expect(isAnimatedValue(animatedStyle.width)).toBe(true);
     expect(isAnimatedValue(animatedStyle.height)).toBe(true);
+
+    const depthAnimatedStyle = getLayerStyles(component, 'aws-btn-bottom').find(
+      (style) => style && isAnimatedValue(style.width)
+    );
+    const faceAnimatedStyle = getLayerStyles(component, 'aws-btn-content').find(
+      (style) => style && isAnimatedValue(style.width)
+    );
+
+    expect(depthAnimatedStyle.width).toBe(animatedStyle.width);
+    expect(faceAnimatedStyle.width).toBe(animatedStyle.width);
   });
 
   it('keeps fixed-size changes instant when animateSize is disabled', () => {
@@ -185,6 +198,87 @@ describe('AwesomeButton size behavior', () => {
     });
 
     expect(getRenderedText(component)).toBe('Open');
+  });
+
+  it('measures auto-width text on an unconstrained hidden horizontal axis', () => {
+    const component = createComponent(
+      <AwesomeButton
+        borderWidth={2}
+        paddingHorizontal={20}
+        textFontFamily="Example Font"
+        textLineHeight={24}
+        textSize={16}
+      >
+        Open
+      </AwesomeButton>
+    );
+    const viewport = component.root.findByProps({
+      testID: 'aws-btn-hidden-measure-viewport',
+    });
+    const measurement = component.root.findByProps({
+      testID: 'aws-btn-hidden-measure',
+    });
+    const measurementText = component.root.findByProps({
+      testID: 'aws-btn-hidden-measure-text',
+    });
+
+    expect(viewport.props).toEqual(
+      expect.objectContaining({
+        accessible: false,
+        accessibilityElementsHidden: true,
+        horizontal: true,
+        importantForAccessibility: 'no-hide-descendants',
+        pointerEvents: 'none',
+        scrollEnabled: false,
+        showsHorizontalScrollIndicator: false,
+      })
+    );
+    expect(viewport.props.style).toEqual(
+      expect.objectContaining({ opacity: 0, position: 'absolute' })
+    );
+    expect(measurement.props.style).toEqual(
+      expect.objectContaining({
+        borderWidth: 2,
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+      })
+    );
+    expect(measurement.props.style).not.toEqual(
+      expect.objectContaining({ position: 'absolute' })
+    );
+    expect(measurementText.props).toEqual(
+      expect.objectContaining({
+        allowFontScaling: true,
+        children: 'Open',
+      })
+    );
+    expect(measurementText.props.style).toEqual(
+      expect.objectContaining({
+        fontFamily: 'Example Font',
+        fontSize: 16,
+        fontWeight: 'bold',
+        lineHeight: 24,
+      })
+    );
+
+    act(() => {
+      component.update(
+        <AwesomeButton
+          borderWidth={2}
+          paddingHorizontal={20}
+          textFontFamily="Example Font"
+          textLineHeight={24}
+          textSize={16}
+        >
+          Open analytics dashboard
+        </AwesomeButton>
+      );
+    });
+
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-hidden-measure-text' })
+        .props.children
+    ).toBe('Open analytics dashboard');
   });
 
   it('keeps auto-width changes instant when animateSize is disabled', () => {
