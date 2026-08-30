@@ -7,25 +7,26 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Animated, type LayoutChangeEvent } from 'react-native';
 import {
-  cancelFrame,
-  getFrameTimestamp,
-  requestFrame,
-  type FrameHandle,
-} from '../frameLoop';
+  Animated,
+  PixelRatio,
+  type LayoutChangeEvent,
+  type NativeSyntheticEvent,
+  type TextLayoutEventData,
+} from 'react-native';
+import { getFrameTimestamp } from '../frameLoop';
 import {
   getTextTransitionTimeline,
   runTextTransition,
   type TextTransitionTimeline,
 } from '../textTransition';
 import {
+  BUTTON_SIZE_ANIMATION_DURATION_MS,
   getAutoWidthTextFlow,
   type WidthCommandPort,
   type WidthMode,
 } from './contracts';
 
-const FIT_TOLERANCE = 0.5;
 const PHASE_LEAD = 0.3;
 
 type TextMeasurementKind = 'source' | 'target' | 'candidate';
@@ -56,6 +57,16 @@ type PendingTransition = {
   sourceWidth: number | null;
 };
 
+type PendingTargetCommit = {
+  generation: number;
+  publicationId: number;
+  metricRevision: number;
+  text: string;
+  requiredWidth: number;
+  publishedLayoutRevision: number;
+  acknowledgedLayoutRevision: number | null;
+};
+
 type UseAutoWidthTextCoordinatorOptions = {
   after: ReactNode;
   animatedOpacity: Animated.Value;
@@ -72,6 +83,30 @@ type UseAutoWidthTextCoordinatorOptions = {
 
 const isNonEmptyString = (value: ReactNode): value is string =>
   typeof value === 'string' && value.length > 0;
+
+const physicalPixelScale = () => {
+  const scale = PixelRatio.get();
+  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+};
+
+export const roundRequiredWidthToPhysicalPixel = (
+  width: number,
+  scale = physicalPixelScale()
+) => {
+  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  return Math.ceil(width * safeScale) / safeScale;
+};
+
+export const hasPhysicalPixelFit = (
+  requiredWidth: number,
+  availableWidth: number,
+  scale = physicalPixelScale()
+) => {
+  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  const requiredPixels = Math.ceil(requiredWidth * safeScale);
+  const availablePixels = Math.floor(availableWidth * safeScale);
+  return availablePixels >= requiredPixels;
+};
 
 const useAutoWidthTextCoordinator = ({
   after,
@@ -96,11 +131,13 @@ const useAutoWidthTextCoordinator = ({
     useState<HiddenMeasurementRequest | null>(null);
   const [transientTextFrame, setTransientTextFrame] = useState(false);
   const [alignTextLogicalLeading, setAlignTextLogicalLeading] = useState(false);
+  const [visibleTextPublicationId, setVisibleTextPublicationId] = useState(0);
 
   const mountedRef = useRef(true);
   const didInitializeRef = useRef(false);
   const generationRef = useRef(0);
   const requestSequenceRef = useRef(0);
+  const publicationSequenceRef = useRef(0);
   const metricRevisionRef = useRef(0);
   const measurementSignatureRef = useRef(measurementSignature);
   const widthModeRef = useRef(widthMode);
@@ -110,19 +147,20 @@ const useAutoWidthTextCoordinator = ({
   const afterWidthRef = useRef<number | null>(hasAfter ? null : 0);
   const displayedTextRef = useRef<string | null>(stringChildren);
   const targetTextRef = useRef<string | null>(stringChildren);
+  const transitionSourceTextRef = useRef<string | null>(null);
   const displayedFrameWidthRef = useRef<number | null>(null);
   const displayedFrameMetricRevisionRef = useRef<number | null>(null);
   const targetWidthRef = useRef<number | null>(null);
   const availableWidthRef = useRef<number | null>(null);
   const layoutRevisionRef = useRef(0);
   const externallyConstrainedRef = useRef(false);
-  const constraintConfirmationFrameRef = useRef<FrameHandle | null>(null);
   const requestRef = useRef<HiddenMeasurementRequest | null>(null);
   const deferredMeasurementRef = useRef<{
     kind: TextMeasurementKind;
     text: string;
   } | null>(null);
   const pendingTransitionRef = useRef<PendingTransition | null>(null);
+  const pendingTargetCommitRef = useRef<PendingTargetCommit | null>(null);
   const heldCandidateRef = useRef<HeldCandidate | null>(null);
   const latestCandidateRef = useRef<string | null>(null);
   const refreshPendingRef = useRef(false);
@@ -182,13 +220,15 @@ const useAutoWidthTextCoordinator = ({
     if (
       !transitionStartedRef.current ||
       !textPhaseCompleteRef.current ||
-      !widthPhaseCompleteRef.current
+      !widthPhaseCompleteRef.current ||
+      pendingTargetCommitRef.current !== null
     ) {
       return;
     }
     transitionStartedRef.current = false;
     pendingTransitionRef.current = null;
     timelineRef.current = null;
+    transitionSourceTextRef.current = null;
     activeFlowRef.current = 'initial';
     growthTextPendingRef.current = false;
     shrinkWidthPendingRef.current = false;
@@ -242,13 +282,48 @@ const useAutoWidthTextCoordinator = ({
     return externallyConstrainedRef.current;
   }, []);
 
-  const retryHeldCandidateRef = useRef<() => void>(() => undefined);
-  const confirmConstraintRef = useRef<() => void>(() => undefined);
+  const settlePendingTargetCommit = useCallback(() => {
+    const pending = pendingTargetCommitRef.current;
+    if (
+      pending === null ||
+      !mountedRef.current ||
+      pending.generation !== generationRef.current ||
+      pending.metricRevision !== metricRevisionRef.current ||
+      pending.text !== targetTextRef.current ||
+      pending.acknowledgedLayoutRevision === null ||
+      pending.acknowledgedLayoutRevision < pending.publishedLayoutRevision
+    ) {
+      return false;
+    }
+    const availableWidth = currentAvailableWidth();
+    const fits =
+      availableWidth !== null &&
+      hasPhysicalPixelFit(pending.requiredWidth, availableWidth);
+    if (!fits && !isConstrainedFallback()) return false;
 
+    pendingTargetCommitRef.current = null;
+    textPhaseCompleteRef.current = true;
+    setTransientTextFrame(false);
+    if (
+      activeFlowRef.current === 'shrink-last' &&
+      widthPhaseCompleteRef.current &&
+      targetWidthRef.current !== null
+    ) {
+      widthCommands.setImmediately(targetWidthRef.current);
+    }
+    finishIfSettled();
+    return true;
+  }, [
+    currentAvailableWidth,
+    finishIfSettled,
+    isConstrainedFallback,
+    widthCommands,
+  ]);
+
+  const retryHeldCandidateRef = useRef<() => void>(() => undefined);
   const markWidthComplete = useCallback(() => {
     widthPhaseCompleteRef.current = true;
     widthPhaseStartedAtRef.current = null;
-    confirmConstraintRef.current();
     retryHeldCandidateRef.current();
     finishIfSettled();
   }, [finishIfSettled]);
@@ -299,7 +374,7 @@ const useAutoWidthTextCoordinator = ({
       const availableWidth = currentAvailableWidth();
       const fits =
         availableWidth !== null &&
-        candidate.requiredWidth <= availableWidth + FIT_TOLERANCE;
+        hasPhysicalPixelFit(candidate.requiredWidth, availableWidth);
       if (!fits && !isConstrainedFallback()) {
         heldCandidateRef.current = candidate;
         return false;
@@ -312,27 +387,27 @@ const useAutoWidthTextCoordinator = ({
       const isFinal =
         textEngineCompleteRef.current &&
         candidate.text === targetTextRef.current;
-      setTransientTextFrame(!isFinal);
       if (isFinal) {
-        textPhaseCompleteRef.current = true;
-        if (
-          activeFlowRef.current === 'shrink-last' &&
-          widthPhaseCompleteRef.current &&
-          targetWidthRef.current !== null
-        ) {
-          widthCommands.setImmediately(targetWidthRef.current);
-        }
-        finishIfSettled();
+        publicationSequenceRef.current += 1;
+        const publicationId = publicationSequenceRef.current;
+        pendingTargetCommitRef.current = {
+          generation: candidate.generation,
+          publicationId,
+          metricRevision: candidate.metricRevision,
+          text: candidate.text,
+          requiredWidth: candidate.requiredWidth,
+          publishedLayoutRevision: layoutRevisionRef.current,
+          acknowledgedLayoutRevision: null,
+        };
+        textPhaseCompleteRef.current = false;
+        setVisibleTextPublicationId(publicationId);
+        setTransientTextFrame(true);
+      } else {
+        setTransientTextFrame(true);
       }
       return true;
     },
-    [
-      currentAvailableWidth,
-      finishIfSettled,
-      isConstrainedFallback,
-      syncDisplayedText,
-      widthCommands,
-    ]
+    [currentAvailableWidth, isConstrainedFallback, syncDisplayedText]
   );
 
   const retryHeldCandidate = useCallback(() => {
@@ -340,63 +415,6 @@ const useAutoWidthTextCoordinator = ({
     if (candidate !== null) acceptCandidate(candidate);
   }, [acceptCandidate]);
   retryHeldCandidateRef.current = retryHeldCandidate;
-
-  const cancelConstraintConfirmation = useCallback(() => {
-    cancelFrame(constraintConfirmationFrameRef.current);
-    constraintConfirmationFrameRef.current = null;
-  }, []);
-
-  const confirmConstraint = useCallback(() => {
-    cancelConstraintConfirmation();
-    if (
-      widthModeRef.current !== 'auto' ||
-      !transitionStartedRef.current ||
-      !widthPhaseCompleteRef.current
-    ) {
-      return;
-    }
-    const generation = generationRef.current;
-    let observedRevision = layoutRevisionRef.current;
-    let stableMismatchFrames = 0;
-    const tick = () => {
-      if (
-        !mountedRef.current ||
-        generationRef.current !== generation ||
-        !transitionStartedRef.current ||
-        !widthPhaseCompleteRef.current
-      ) {
-        constraintConfirmationFrameRef.current = null;
-        return;
-      }
-      const commanded = widthCommands.getCurrent();
-      const actual = availableWidthRef.current;
-      if (
-        commanded !== null &&
-        actual !== null &&
-        actual + FIT_TOLERANCE >= commanded
-      ) {
-        externallyConstrainedRef.current = false;
-        constraintConfirmationFrameRef.current = null;
-        retryHeldCandidateRef.current();
-        return;
-      }
-      if (layoutRevisionRef.current === observedRevision) {
-        stableMismatchFrames += 1;
-      } else {
-        observedRevision = layoutRevisionRef.current;
-        stableMismatchFrames = 0;
-      }
-      if (commanded !== null && actual !== null && stableMismatchFrames >= 2) {
-        externallyConstrainedRef.current = true;
-        constraintConfirmationFrameRef.current = null;
-        retryHeldCandidateRef.current();
-        return;
-      }
-      constraintConfirmationFrameRef.current = requestFrame(tick);
-    };
-    constraintConfirmationFrameRef.current = requestFrame(tick);
-  }, [cancelConstraintConfirmation, widthCommands]);
-  confirmConstraintRef.current = confirmConstraint;
 
   const startTextPhaseRef = useRef<
     (generation: number, sourceText: string, targetText: string) => void
@@ -475,6 +493,7 @@ const useAutoWidthTextCoordinator = ({
           ? getAutoWidthTextFlow(sourceWidth, targetWidth)
           : 'text-only';
       timelineRef.current = timeline;
+      transitionSourceTextRef.current = pending.sourceText;
       activeFlowRef.current = flow;
       targetWidthRef.current = targetWidth;
       displayedFrameWidthRef.current = sourceWidth;
@@ -517,6 +536,13 @@ const useAutoWidthTextCoordinator = ({
           pending.targetText
         );
       } else if (flow === 'text-only') {
+        const availableWidth = currentAvailableWidth();
+        if (
+          availableWidth === null ||
+          !hasPhysicalPixelFit(targetWidth, availableWidth)
+        ) {
+          widthCommands.setImmediately(targetWidth);
+        }
         startTextPhaseRef.current(
           pending.generation,
           pending.sourceText,
@@ -549,7 +575,13 @@ const useAutoWidthTextCoordinator = ({
         );
       }
     },
-    [animatedOpacity, retryHeldCandidate, startTransitionWidth, widthCommands]
+    [
+      animatedOpacity,
+      currentAvailableWidth,
+      retryHeldCandidate,
+      startTransitionWidth,
+      widthCommands,
+    ]
   );
 
   const settleMeasuredTarget = useCallback(
@@ -557,9 +589,6 @@ const useAutoWidthTextCoordinator = ({
       targetWidthRef.current = targetWidth;
       displayedFrameWidthRef.current = targetWidth;
       displayedFrameMetricRevisionRef.current = metricRevisionRef.current;
-      syncDisplayedText(targetText);
-      setTransientTextFrame(false);
-      setAlignTextLogicalLeading(false);
       animatedOpacity.setValue(1);
       if (widthModeRef.current === 'auto') {
         if (
@@ -572,8 +601,67 @@ const useAutoWidthTextCoordinator = ({
           widthCommands.animateTo(targetWidth);
         }
       }
+      syncDisplayedText(targetText);
+      setTransientTextFrame(false);
+      setAlignTextLogicalLeading(false);
     },
     [animatedOpacity, syncDisplayedText, widthCommands]
+  );
+
+  const startMeasuredAtomicHandoff = useCallback(
+    (pending: PendingTransition, targetWidth: number) => {
+      if (!mountedRef.current || pending.generation !== generationRef.current) {
+        return;
+      }
+      const sourceWidth = pending.sourceWidth ?? widthCommands.getCurrent();
+      const flow = getAutoWidthTextFlow(sourceWidth, targetWidth);
+      transitionSourceTextRef.current = pending.sourceText;
+      targetWidthRef.current = targetWidth;
+      displayedFrameWidthRef.current = sourceWidth;
+      displayedFrameMetricRevisionRef.current = metricRevisionRef.current;
+      latestCandidateRef.current = pending.targetText;
+
+      const config = liveConfigRef.current;
+      if (flow === 'initial' || !config.animateSize || config.reduceMotion) {
+        settleMeasuredTarget(pending.targetText, targetWidth);
+        pendingTransitionRef.current = null;
+        return;
+      }
+
+      activeFlowRef.current = flow;
+      transitionStartedRef.current = true;
+      textEngineCompleteRef.current = true;
+      textPhaseCompleteRef.current = false;
+      widthPhaseCompleteRef.current = false;
+      growthTextPendingRef.current = false;
+      shrinkWidthPendingRef.current = false;
+      setTransientTextFrame(true);
+      setAlignTextLogicalLeading(false);
+      animatedOpacity.setValue(1);
+
+      const targetCandidate: HeldCandidate = {
+        generation: pending.generation,
+        metricRevision: metricRevisionRef.current,
+        text: pending.targetText,
+        requiredWidth: targetWidth,
+      };
+      acceptCandidate(targetCandidate);
+
+      startTransitionWidth(
+        pending.generation,
+        targetWidth,
+        BUTTON_SIZE_ANIMATION_DURATION_MS,
+        flow === 'grow-first' ? retryHeldCandidate : undefined
+      );
+    },
+    [
+      acceptCandidate,
+      animatedOpacity,
+      retryHeldCandidate,
+      settleMeasuredTarget,
+      startTransitionWidth,
+      widthCommands,
+    ]
   );
 
   const retargetActiveWidth = useCallback(
@@ -618,7 +706,7 @@ const useAutoWidthTextCoordinator = ({
   const handleHiddenMeasurementLayout = useCallback(
     (request: HiddenMeasurementRequest, event: LayoutChangeEvent) => {
       const current = requestRef.current;
-      const requiredWidth = event.nativeEvent.layout.width;
+      const measuredWidth = event.nativeEvent.layout.width;
       if (
         !mountedRef.current ||
         current === null ||
@@ -627,11 +715,12 @@ const useAutoWidthTextCoordinator = ({
         current.metricRevision !== request.metricRevision ||
         request.generation !== generationRef.current ||
         request.metricRevision !== metricRevisionRef.current ||
-        !Number.isFinite(requiredWidth) ||
-        requiredWidth < 0
+        !Number.isFinite(measuredWidth) ||
+        measuredWidth < 0
       ) {
         return;
       }
+      const requiredWidth = roundRequiredWidthToPhysicalPixel(measuredWidth);
       syncRequest(null);
 
       if (request.kind === 'source') {
@@ -665,8 +754,7 @@ const useAutoWidthTextCoordinator = ({
           pending.targetText.length > 0 &&
           pending.sourceText !== pending.targetText;
         if (!shouldAnimate) {
-          settleMeasuredTarget(pending.targetText, requiredWidth);
-          pendingTransitionRef.current = null;
+          startMeasuredAtomicHandoff(pending, requiredWidth);
           return;
         }
         startMeasuredTransition(pending, requiredWidth);
@@ -684,7 +772,7 @@ const useAutoWidthTextCoordinator = ({
       acceptCandidate,
       requestMeasurement,
       retargetActiveWidth,
-      settleMeasuredTarget,
+      startMeasuredAtomicHandoff,
       startMeasuredTransition,
       syncRequest,
     ]
@@ -766,11 +854,11 @@ const useAutoWidthTextCoordinator = ({
 
   const invalidateTransition = useCallback(() => {
     generationRef.current += 1;
-    cancelConstraintConfirmation();
     stopTextEngine();
     syncRequest(null);
     deferredMeasurementRef.current = null;
     pendingTransitionRef.current = null;
+    pendingTargetCommitRef.current = null;
     heldCandidateRef.current = null;
     latestCandidateRef.current = null;
     refreshPendingRef.current = false;
@@ -782,13 +870,10 @@ const useAutoWidthTextCoordinator = ({
     shrinkWidthPendingRef.current = false;
     widthPhaseStartedAtRef.current = null;
     timelineRef.current = null;
+    transitionSourceTextRef.current = null;
+    externallyConstrainedRef.current = false;
     widthCommands.cancel();
-  }, [
-    cancelConstraintConfirmation,
-    stopTextEngine,
-    syncRequest,
-    widthCommands,
-  ]);
+  }, [stopTextEngine, syncRequest, widthCommands]);
 
   const refreshMeasurements = useCallback(() => {
     if (!mountedRef.current) return;
@@ -853,7 +938,22 @@ const useAutoWidthTextCoordinator = ({
     }
     if (stringChildren === targetTextRef.current) {
       if (behaviorChanged) {
+        const fittingSource = transitionSourceTextRef.current;
+        const isEndingScramble =
+          previousBehavior.textTransition &&
+          !previousBehavior.reduceMotion &&
+          (!textTransition || reduceMotion) &&
+          fittingSource !== null;
+        const replacementFrame =
+          isEndingScramble && activeFlowRef.current === 'grow-first'
+            ? fittingSource
+            : isEndingScramble
+            ? stringChildren
+            : null;
         invalidateTransition();
+        if (replacementFrame !== null) {
+          syncDisplayedText(replacementFrame);
+        }
         beginCurrentTarget(stringChildren);
       }
       return;
@@ -863,6 +963,7 @@ const useAutoWidthTextCoordinator = ({
   }, [
     beginCurrentTarget,
     invalidateTransition,
+    syncDisplayedText,
     animateSize,
     reduceMotion,
     stringChildren,
@@ -877,18 +978,21 @@ const useAutoWidthTextCoordinator = ({
       availableWidthRef.current = nextWidth;
       layoutRevisionRef.current += 1;
       const commanded = widthCommands.getCurrent();
-      if (
-        widthModeRef.current !== 'auto' ||
-        (transitionStartedRef.current && !widthPhaseCompleteRef.current)
-      ) {
+      if (widthModeRef.current !== 'auto') {
         externallyConstrainedRef.current = false;
-      } else {
+      } else if (
+        transitionStartedRef.current &&
+        widthPhaseCompleteRef.current
+      ) {
         externallyConstrainedRef.current =
-          commanded !== null && nextWidth + FIT_TOLERANCE >= commanded
-            ? false
-            : externallyConstrainedRef.current;
+          commanded !== null &&
+          !hasPhysicalPixelFit(commanded, nextWidth) &&
+          Math.abs(commanded - nextWidth) > 0.5;
+      } else {
+        externallyConstrainedRef.current = false;
       }
       retryHeldCandidate();
+      settlePendingTargetCommit();
 
       if (stringChildren !== null || widthModeRef.current !== 'auto') return;
       animatedOpacity.setValue(1);
@@ -902,7 +1006,34 @@ const useAutoWidthTextCoordinator = ({
         widthCommands.animateTo(nextWidth);
       }
     },
-    [animatedOpacity, retryHeldCandidate, stringChildren, widthCommands]
+    [
+      animatedOpacity,
+      retryHeldCandidate,
+      settlePendingTargetCommit,
+      stringChildren,
+      widthCommands,
+    ]
+  );
+
+  const onVisibleTextLayout = useCallback(
+    (
+      publicationId: number,
+      _event: NativeSyntheticEvent<TextLayoutEventData>
+    ) => {
+      const pending = pendingTargetCommitRef.current;
+      if (
+        pending === null ||
+        pending.publicationId !== publicationId ||
+        pending.generation !== generationRef.current ||
+        pending.metricRevision !== metricRevisionRef.current ||
+        pending.text !== displayedTextRef.current
+      ) {
+        return;
+      }
+      pending.acknowledgedLayoutRevision = layoutRevisionRef.current;
+      settlePendingTargetCommit();
+    },
+    [settlePendingTargetCommit]
   );
 
   const handleAuxiliaryLayout = useCallback(
@@ -932,14 +1063,14 @@ const useAutoWidthTextCoordinator = ({
     () => () => {
       mountedRef.current = false;
       generationRef.current += 1;
-      cancelConstraintConfirmation();
       stopTextEngine();
       requestRef.current = null;
       deferredMeasurementRef.current = null;
       heldCandidateRef.current = null;
+      pendingTargetCommitRef.current = null;
       widthCommands.cancel();
     },
-    [cancelConstraintConfirmation, stopTextEngine, widthCommands]
+    [stopTextEngine, widthCommands]
   );
 
   return {
@@ -952,7 +1083,9 @@ const useAutoWidthTextCoordinator = ({
       handleAuxiliaryLayout('before', event),
     onHiddenMeasurementLayout: handleHiddenMeasurementLayout,
     onVisibleContentLayout,
+    onVisibleTextLayout,
     transientTextFrame,
+    visibleTextPublicationId,
   };
 };
 

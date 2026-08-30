@@ -8,6 +8,8 @@ export type HeightDimensions = {
   shadow: number;
 };
 
+export const BUTTON_SIZE_ANIMATION_DURATION_MS = 175;
+
 export type WidthCommandPort = {
   animateTo: (nextWidth: number, onComplete?: () => void) => void;
   animateTextTransitionTo: (

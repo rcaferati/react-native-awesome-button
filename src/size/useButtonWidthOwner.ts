@@ -10,12 +10,12 @@ import { Animated, Easing } from 'react-native';
 import { cancelFrame, requestFrame, type FrameHandle } from '../frameLoop';
 import type { ButtonWidth } from '../types';
 import {
+  BUTTON_SIZE_ANIMATION_DURATION_MS,
   getWidthMode,
   type WidthCommandPort,
   type WidthMode,
 } from './contracts';
 
-const SIZE_ANIMATION_DURATION = 175;
 const SIZE_ANIMATION_EASING = Easing.bezier(0.3, 0.05, 0.2, 1);
 
 type UseButtonWidthOwnerOptions = {
@@ -130,7 +130,7 @@ const useButtonWidthOwner = ({
         syncStateWidth(nextWidth);
         setAnimatingFlag(true);
         const animation = Animated.timing(animatedWidth, {
-          duration: SIZE_ANIMATION_DURATION,
+          duration: BUTTON_SIZE_ANIMATION_DURATION_MS,
           easing: SIZE_ANIMATION_EASING,
           toValue: nextWidth,
           useNativeDriver: false,

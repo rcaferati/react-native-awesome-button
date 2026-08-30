@@ -57,6 +57,7 @@ export function SaveButton() {
   - wider labels start growing immediately and begin text at 30% of the text timeline
   - narrower labels begin text immediately and start shrinking at 30%
   - every transient grapheme frame is measured before it is shown, so an unconstrained auto-width label cannot wrap or clip
+- without `textTransition`, wider labels keep the fitting source visible until the target fits; the target remains clipped to one line until a matching native layout commit confirms physical-pixel fit, while narrower labels swap before width shrinks
 - fixed, stretch, and externally constrained transitions stay on one clipped line; stable labels regain normal wrapping after settlement
 - text scrambling uses Unicode grapheme clusters, metric-aware Latin pools, a 7 ms slot stagger, and a native frame clock
 - `animateSize={false}` settles target geometry before text begins; Reduced Motion settles both immediately

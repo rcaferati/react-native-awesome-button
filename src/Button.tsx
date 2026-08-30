@@ -287,9 +287,11 @@ const AwesomeButton = ({
     onBeforeLayout,
     onHiddenMeasurementLayout,
     onVisibleContentLayout,
+    onVisibleTextLayout,
     resolvedWidth,
     sizeAnimatedStyles,
     transientTextFrame,
+    visibleTextPublicationId,
   } = useButtonSizeBehavior({
     after,
     animatedOpacity,
@@ -404,6 +406,7 @@ const AwesomeButton = ({
         onBeforeLayout={onBeforeLayout}
         onHiddenMeasurementLayout={onHiddenMeasurementLayout}
         onVisibleContentLayout={onVisibleContentLayout}
+        onVisibleTextLayout={onVisibleTextLayout}
         paddingBottom={normalizedPaddingBottom}
         paddingHorizontal={normalizedPaddingHorizontal}
         paddingTop={normalizedPaddingTop}
@@ -421,6 +424,7 @@ const AwesomeButton = ({
         textOpacity={textOpacity}
         textSize={resolvedTextSize}
         transientTextFrame={transientTextFrame}
+        visibleTextPublicationId={visibleTextPublicationId}
         width={width}
       >
         {children}

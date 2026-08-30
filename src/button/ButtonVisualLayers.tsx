@@ -8,7 +8,9 @@ import {
   View,
   type ColorValue,
   type LayoutChangeEvent,
+  type NativeSyntheticEvent,
   type StyleProp,
+  type TextLayoutEventData,
   type ViewStyle,
 } from 'react-native';
 import Placeholder from '../Placeholder';
@@ -62,6 +64,10 @@ type ButtonVisualLayersProps = {
     event: LayoutChangeEvent
   ) => void;
   onVisibleContentLayout: (event: LayoutChangeEvent) => void;
+  onVisibleTextLayout: (
+    publicationId: number,
+    event: NativeSyntheticEvent<TextLayoutEventData>
+  ) => void;
   paddingBottom: number;
   paddingHorizontal: number;
   paddingTop: number;
@@ -79,6 +85,7 @@ type ButtonVisualLayersProps = {
   textOpacity: Animated.Value;
   textSize: number;
   transientTextFrame: boolean;
+  visibleTextPublicationId: number;
   width: number | null;
 };
 
@@ -121,6 +128,7 @@ const ButtonVisualLayers = ({
   onBeforeLayout,
   onHiddenMeasurementLayout,
   onVisibleContentLayout,
+  onVisibleTextLayout,
   paddingBottom,
   paddingHorizontal,
   paddingTop,
@@ -138,6 +146,7 @@ const ButtonVisualLayers = ({
   textOpacity,
   textSize,
   transientTextFrame,
+  visibleTextPublicationId,
   width,
 }: ButtonVisualLayersProps) => {
   const dynamicStyles = useMemo(
@@ -331,12 +340,16 @@ const ButtonVisualLayers = ({
 
     const content = hasPrimitiveTextChild ? (
       <Text
+        key={`aws-btn-content-text-${visibleTextPublicationId}`}
         testID="aws-btn-content-text"
         style={[styles.container__text, dynamicStyles.container__text]}
         accessible={false}
         allowFontScaling
         ellipsizeMode={transientTextFrame ? 'clip' : undefined}
         numberOfLines={transientTextFrame ? 1 : undefined}
+        onTextLayout={(event) =>
+          onVisibleTextLayout(visibleTextPublicationId, event)
+        }
       >
         {typeof children === 'string' ? displayedText ?? children : children}
       </Text>
@@ -381,8 +394,10 @@ const ButtonVisualLayers = ({
     hasRenderableChildren,
     onAfterLayout,
     onBeforeLayout,
+    onVisibleTextLayout,
     reduceMotion,
     transientTextFrame,
+    visibleTextPublicationId,
   ]);
   const suppressProgressDarkening = progress && activity && !showProgressBar;
 

@@ -65,6 +65,16 @@ const layoutVisibleFace = (component, width) => {
   });
 };
 
+const acknowledgeVisibleText = (component) => {
+  act(() => {
+    component.root
+      .findByProps({ testID: 'aws-btn-content-text' })
+      .props.onTextLayout({
+        nativeEvent: { lines: [{}] },
+      });
+  });
+};
+
 const settleInitialAutoLabel = (component, width) => {
   expect(measureHiddenText(component, width)).toBe(true);
   expect(measureHiddenText(component, width)).toBe(true);
@@ -314,6 +324,11 @@ describe('AwesomeButton textTransition', () => {
     expect(
       component.root.findByProps({ testID: 'aws-btn-content-text' }).props
         .numberOfLines
+    ).toBe(1);
+    acknowledgeVisibleText(component);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
     ).toBeUndefined();
   });
 
@@ -351,6 +366,7 @@ describe('AwesomeButton textTransition', () => {
     expect(measureHiddenText(component)).toBe(true);
 
     expect(getRenderedText(component)).toBe('Go#3');
+    acknowledgeVisibleText(component);
     expect(
       component.root.findAll(
         (node) =>
@@ -509,6 +525,7 @@ describe('AwesomeButton textTransition', () => {
     });
     expect(measureHiddenText(component, 80)).toBe(true);
     expect(getRenderedText(component)).toBe('Go');
+    acknowledgeVisibleText(component);
     expect(getRenderedWidth(component)).toBe(80);
   });
 
@@ -540,6 +557,7 @@ describe('AwesomeButton textTransition', () => {
     act(() => {
       jest.runAllTimers();
     });
+    layoutVisibleFace(component, 160);
 
     expect(getRenderedText(component)).toBe(constrainedCandidate);
     expect(
@@ -547,6 +565,18 @@ describe('AwesomeButton textTransition', () => {
     ).toEqual(
       expect.objectContaining({ ellipsizeMode: 'clip', numberOfLines: 1 })
     );
+
+    expect(measureHiddenText(component, 240)).toBe(true);
+    expect(getRenderedText(component)).toBe('Mission control');
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBe(1);
+    acknowledgeVisibleText(component);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBeUndefined();
   });
 
   it('keeps unchanged labels stable and swaps non-transition labels only after the width phase they require', () => {
@@ -666,6 +696,48 @@ describe('AwesomeButton textTransition', () => {
     expect(measureHiddenText(component)).toBe(true);
 
     expect(getRenderedText(component)).toBe('Go#3');
+  });
+
+  it('restores the fitting source when textTransition is disabled mid-growth', () => {
+    const random = jest.spyOn(Math, 'random').mockReturnValue(0.25);
+    const component = createButton(
+      <AwesomeButton textTransition>Open</AwesomeButton>
+    );
+    settleInitialAutoLabel(component, 76);
+
+    act(() => {
+      component.update(
+        <AwesomeButton textTransition>Open analytics dashboard</AwesomeButton>
+      );
+    });
+    expect(measureHiddenText(component, 212)).toBe(true);
+    let publishedTransient = false;
+    for (let frame = 0; frame < 12 && !publishedTransient; frame += 1) {
+      act(() => {
+        jest.advanceTimersByTime(16);
+      });
+      measureHiddenText(component, 70);
+      const rendered = getRenderedText(component);
+      publishedTransient =
+        rendered !== 'Open' && rendered !== 'Open analytics dashboard';
+    }
+    expect(publishedTransient).toBe(true);
+    expect(getRenderedText(component)).not.toBe('Open');
+    expect(getRenderedText(component)).not.toBe('Open analytics dashboard');
+
+    act(() => {
+      component.update(<AwesomeButton>Open analytics dashboard</AwesomeButton>);
+    });
+    expect(getRenderedText(component)).toBe('Open');
+    expect(measureHiddenText(component, 212)).toBe(true);
+
+    act(() => {
+      jest.runAllTimers();
+    });
+    layoutVisibleFace(component, 212);
+    expect(getRenderedText(component)).toBe('Open analytics dashboard');
+    acknowledgeVisibleText(component);
+    random.mockRestore();
   });
 
   it('settles without random frames when Reduced Motion is enabled initially', async () => {

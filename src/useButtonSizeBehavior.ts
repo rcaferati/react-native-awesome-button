@@ -3,7 +3,9 @@ import {
   Animated,
   type ColorValue,
   type LayoutChangeEvent,
+  type NativeSyntheticEvent,
   type StyleProp,
+  type TextLayoutEventData,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
@@ -52,9 +54,14 @@ type UseButtonSizeBehaviorResult = {
     event: LayoutChangeEvent
   ) => void;
   onVisibleContentLayout: (event: LayoutChangeEvent) => void;
+  onVisibleTextLayout: (
+    publicationId: number,
+    event: NativeSyntheticEvent<TextLayoutEventData>
+  ) => void;
   resolvedWidth: number | null;
   sizeAnimatedStyles: SizeAnimatedStyles;
   transientTextFrame: boolean;
+  visibleTextPublicationId: number;
 };
 
 const useButtonSizeBehavior = ({

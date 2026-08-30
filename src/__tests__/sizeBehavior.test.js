@@ -2,6 +2,10 @@ import React from 'react';
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import AwesomeButton from '../Button';
+import {
+  hasPhysicalPixelFit,
+  roundRequiredWidthToPhysicalPixel,
+} from '../size/useAutoWidthTextCoordinator';
 import ThemedButton from '../themed/ThemedButton';
 
 const isAnimatedValue = (value) =>
@@ -62,6 +66,24 @@ const measureHiddenWidth = (component, width) => {
   });
 };
 
+const layoutVisibleFace = (component, width) => {
+  act(() => {
+    component.root.findByProps({ testID: 'aws-btn-text' }).props.onLayout({
+      nativeEvent: { layout: { width } },
+    });
+  });
+};
+
+const acknowledgeVisibleText = (component) => {
+  act(() => {
+    component.root
+      .findByProps({ testID: 'aws-btn-content-text' })
+      .props.onTextLayout({
+        nativeEvent: { lines: [{}] },
+      });
+  });
+};
+
 describe('AwesomeButton size behavior', () => {
   let restoreAnimationFrame;
 
@@ -77,6 +99,17 @@ describe('AwesomeButton size behavior', () => {
     jest.useRealTimers();
     restoreAnimationFrame();
   });
+
+  it.each([1, 2, 3])(
+    'requires a full physical-pixel fit at %sx scale',
+    (scale) => {
+      expect(hasPhysicalPixelFit(100, 100 - 1 / scale, scale)).toBe(false);
+      expect(hasPhysicalPixelFit(100, 100, scale)).toBe(true);
+      expect(
+        roundRequiredWidthToPhysicalPixel(100 + 0.1 / scale, scale)
+      ).toBeCloseTo(100 + 1 / scale, 8);
+    }
+  );
 
   it('keeps committed geometry attached across fixed-size updates', () => {
     const component = createComponent(
@@ -183,22 +216,56 @@ describe('AwesomeButton size behavior', () => {
     ).toBe(true);
   });
 
-  it('settles stable text immediately while animating auto width without text transition', () => {
+  it('fit-gates growth and swaps before shrink without text transition', () => {
     const component = createComponent(<AwesomeButton>Open</AwesomeButton>);
     measureHiddenWidth(component, 76);
+    measureHiddenWidth(component, 76);
+    layoutVisibleFace(component, 76);
 
     act(() => {
       component.update(<AwesomeButton>Open analytics dashboard</AwesomeButton>);
     });
 
     measureHiddenWidth(component, 212);
-    expect(getRenderedText(component)).toBe('Open analytics dashboard');
+    expect(getRenderedText(component)).toBe('Open');
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBe(1);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-view' }).props
+        .accessibilityLabel
+    ).toBe('Open analytics dashboard');
 
     act(() => {
-      jest.runAllTimers();
+      jest.advanceTimersByTime(96);
+    });
+
+    expect(getRenderedText(component)).toBe('Open');
+
+    layoutVisibleFace(component, 212);
+    act(() => {
+      jest.advanceTimersByTime(128);
     });
 
     expect(getRenderedText(component)).toBe('Open analytics dashboard');
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBe(1);
+
+    layoutVisibleFace(component, 211.75);
+    acknowledgeVisibleText(component);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBe(1);
+
+    layoutVisibleFace(component, 212);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBeUndefined();
 
     act(() => {
       component.update(<AwesomeButton>Open</AwesomeButton>);
@@ -206,12 +273,90 @@ describe('AwesomeButton size behavior', () => {
 
     measureHiddenWidth(component, 76);
     expect(getRenderedText(component)).toBe('Open');
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBe(1);
+    acknowledgeVisibleText(component);
 
     act(() => {
       jest.runAllTimers();
     });
 
     expect(getRenderedText(component)).toBe('Open');
+  });
+
+  it('suppresses a stale pending growth handoff after replacement', () => {
+    const component = createComponent(<AwesomeButton>Open</AwesomeButton>);
+    measureHiddenWidth(component, 76);
+    measureHiddenWidth(component, 76);
+    layoutVisibleFace(component, 76);
+
+    act(() => {
+      component.update(<AwesomeButton>Open analytics dashboard</AwesomeButton>);
+    });
+    measureHiddenWidth(component, 212);
+    expect(getRenderedText(component)).toBe('Open');
+
+    act(() => {
+      component.update(<AwesomeButton>Save report</AwesomeButton>);
+    });
+    measureHiddenWidth(component, 132);
+    layoutVisibleFace(component, 132);
+
+    act(() => {
+      jest.advanceTimersByTime(256);
+    });
+
+    expect(getRenderedText(component)).toBe('Save report');
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBe(1);
+    acknowledgeVisibleText(component);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBeUndefined();
+  });
+
+  it('rejects a stale native target acknowledgement after replacement', () => {
+    const component = createComponent(<AwesomeButton>Open</AwesomeButton>);
+    measureHiddenWidth(component, 76);
+    measureHiddenWidth(component, 76);
+    layoutVisibleFace(component, 76);
+
+    act(() => {
+      component.update(<AwesomeButton>Open analytics dashboard</AwesomeButton>);
+    });
+    measureHiddenWidth(component, 212);
+    layoutVisibleFace(component, 212);
+    act(() => {
+      jest.advanceTimersByTime(256);
+    });
+    const staleAcknowledgement = component.root.findByProps({
+      testID: 'aws-btn-content-text',
+    }).props.onTextLayout;
+
+    act(() => {
+      component.update(<AwesomeButton>Save report</AwesomeButton>);
+    });
+    measureHiddenWidth(component, 132);
+    expect(getRenderedText(component)).toBe('Save report');
+
+    act(() => {
+      staleAcknowledgement({ nativeEvent: { lines: [{}] } });
+    });
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBe(1);
+
+    acknowledgeVisibleText(component);
+    expect(
+      component.root.findByProps({ testID: 'aws-btn-content-text' }).props
+        .numberOfLines
+    ).toBeUndefined();
   });
 
   it('measures auto-width text on an unconstrained hidden horizontal axis', () => {
