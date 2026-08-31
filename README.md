@@ -1,6 +1,8 @@
 # React Native Awesome Button
 
-`@rcaferati/react-native-awesome-button` is the current npm package for this repo.
+`@rcaferati/react-native-awesome-button` brings the Awesome Button interaction,
+progress, sizing, and theme system to React Native with native `Pressable`,
+accessibility, and animation behavior.
 
 The library exports:
 
@@ -9,22 +11,22 @@ The library exports:
 - `getTheme`
 - explicit TypeScript types such as `AwesomeButtonProps`, `ThemedButtonProps`, `ButtonWidth`, `ThemeName`, `ButtonVariant`, and `ButtonSize`
 
-| <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-blue-new.gif" /> | <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-rick.gif" /> | <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-cartman.gif" /> |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| <img alt="Blue Awesome Button theme demo" width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-blue-new.gif" /> | <img alt="Rick Awesome Button theme demo" width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-rick.gif" /> | <img alt="Cartman Awesome Button theme demo" width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-cartman.gif" /> |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
-## Install
+## Live Demo
 
 Try the live package demo on [expo.dev](https://snack.expo.dev/@rcaferati/react-native-awesome-button).
 
-[<img src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/expo-demo.png" width="800" />](https://snack.expo.dev/@rcaferati/react-native-awesome-button)
+[<img alt="Open the React Native Awesome Button live Expo demo" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/expo-demo.png" width="800" />](https://snack.expo.dev/@rcaferati/react-native-awesome-button)
 
 ## Figma File
 
-Import the button visuals directly into your [Figma](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue) project.
+Explore the shared Awesome Button visual system in the [Figma design file](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue). The Figma file is a visual design reference; this package's documentation defines its behavior, accessibility, and public API contract.
 
-[<img src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/figma.png" width="800" />](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue)
+[<img alt="Awesome Button components in the shared Figma design file" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/figma.png" width="800" />](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue)
 
-## Install
+## Installation
 
 ```bash
 npm install @rcaferati/react-native-awesome-button
@@ -47,7 +49,9 @@ export function SaveButton() {
 
 `AwesomeButton` supports both plain string labels and arbitrary React Native content.
 
-## Size Changes
+## Features
+
+### Size Changes
 
 `animateSize` is enabled by default.
 
@@ -65,9 +69,7 @@ export function SaveButton() {
 - fixed-to-auto and auto-to-fixed changes remain instant in `3.1.0`
 
 ```tsx
-import AwesomeButton, {
-  ThemedButton,
-} from '@rcaferati/react-native-awesome-button';
+import { ThemedButton } from '@rcaferati/react-native-awesome-button';
 
 export function SizeExample({
   isLong,
@@ -80,8 +82,12 @@ export function SizeExample({
 
   return (
     <>
-      <AwesomeButton textTransition>{label}</AwesomeButton>
-      <AwesomeButton animateSize={false}>{label}</AwesomeButton>
+      <ThemedButton name="basic" autoWidth textTransition>
+        {label}
+      </ThemedButton>
+      <ThemedButton name="basic" autoWidth animateSize={false}>
+        {label}
+      </ThemedButton>
       <ThemedButton name="rick" size={size}>
         {size}
       </ThemedButton>
@@ -90,7 +96,7 @@ export function SizeExample({
 }
 ```
 
-## Progress Buttons
+### Progress Buttons
 
 When `progress` is enabled, `onPress` receives a `next` callback. Call it when your work is done to complete the progress animation and release the button.
 
@@ -113,7 +119,7 @@ export function SubmitButton() {
 }
 ```
 
-## Themed Buttons
+### Themed Buttons
 
 ```tsx
 import { ThemedButton } from '@rcaferati/react-native-awesome-button';
@@ -150,7 +156,7 @@ export function ThemeConfigExample() {
 
 `getTheme()` safely falls back to the default `basic` theme if the provided index or name is invalid.
 
-## Before / After / Extra Content
+### Before / After / Extra Content
 
 Use `before` and `after` for inline content that should animate with the label, and `extra` for content rendered behind the button body.
 
@@ -178,7 +184,7 @@ export function ButtonContentExample() {
 }
 ```
 
-## Transparent Buttons
+### Transparent Buttons
 
 `transparent` is supported on `ThemedButton`. It removes the visible shell layers while preserving the content, hit target, and active/progress feedback.
 
@@ -243,11 +249,14 @@ Unknown variants fall back safely at runtime instead of crashing.
 - `medium`
 - `large`
 
-## Selected Props
+## API Reference
 
-The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonProps`.
+The tables below cover the primary consumer-facing props. The checked-in
+[API Extractor report](etc/react-native-awesome-button.api.md) and exported
+`AwesomeButtonProps` / `ThemedButtonProps` types are the complete public
+TypeScript reference.
 
-### AwesomeButton Props
+### AwesomeButton
 
 | Attribute                      | Type                            | Default               | Description                                                                                                                                                                                        |
 | ------------------------------ | ------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -275,7 +284,7 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `dangerouslySetPressableProps` | `AwesomeButtonPressableProps`   | `{}`                  | Escape hatch for extra `Pressable` props. Core `onPress`, `onPressIn`, and `onPressOut` remain owned by the component.                                                                             |
 | `debouncedPressTime`           | `number`                        | `0`                   | Debounces `onPress` in milliseconds.                                                                                                                                                               |
 | `disabled`                     | `boolean`                       | `false`               | Disables interactions and marks the internal `Pressable` as disabled.                                                                                                                              |
-| `height`                       | `number`                        | `60`                  | Base button height before padding and raise-level adjustments.                                                                                                                                     |
+| `height`                       | `number`                        | `60`                  | Legacy shell height before padding. Its moving face is the shell height minus the resolved raise amount.                                                                                           |
 | `faceHeight`                   | `number`                        | `undefined`           | Canonical moving-face height bridge. Wins over legacy `height`.                                                                                                                                    |
 | `hitSlop`                      | `PressableProps['hitSlop']`     | `undefined`           | Optional press target expansion.                                                                                                                                                                   |
 | `paddingHorizontal`            | `number`                        | `16`                  | Horizontal content padding.                                                                                                                                                                        |
@@ -283,7 +292,7 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `paddingBottom`                | `number`                        | `0`                   | Additional bottom padding for the content row.                                                                                                                                                     |
 | `progress`                     | `boolean`                       | `false`               | Enables the progress-button flow. `onPress` receives a `next` callback in this mode.                                                                                                               |
 | `progressLoadingTime`          | `number`                        | `3000`                | Duration of the loading bar animation in progress mode.                                                                                                                                            |
-| `showProgressBar`              | `boolean`                       | `true`                | Keeps the progress indicator visible while the button is in loading mode.                                                                                                                          |
+| `showProgressBar`              | `boolean`                       | `true`                | Shows or hides the face progress layer. The spinner, busy state, callbacks, and completion handle remain active when false.                                                                        |
 | `raiseLevel`                   | `number`                        | `4`                   | Vertical raise distance used to render the 3D depth effect.                                                                                                                                        |
 | `springRelease`                | `boolean`                       | `true`                | Uses spring-based release animation instead of timing-based release.                                                                                                                               |
 | `stretch`                      | `boolean`                       | `false`               | Makes the button fill the available horizontal space.                                                                                                                                              |
@@ -299,9 +308,9 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `onPress`                      | `(next?) => void`               | `undefined`           | Main press callback. In `progress` mode it receives the completion handler.                                                                                                                        |
 | `onLongPress`                  | `PressableProps['onLongPress']` | `undefined`           | Deprecated physical-only callback that receives the real press event.                                                                                                                              |
 | `onLongPressAction`            | `() => void`                    | `undefined`           | Eventless physical and assistive long action. Wins over legacy eventful `onLongPress`.                                                                                                             |
-| `accessibilityLabel`           | `string`                        | `undefined`           | Spoken identity override; plain string children are inferred when absent.                                                                                                                          |
-| `accessibilityHint`            | `string`                        | `undefined`           | Optional explanation for ordinary assistive activation.                                                                                                                                            |
-| `accessibilityLongPressLabel`  | `string`                        | `undefined`           | Optional name for the eventless assistive long action.                                                                                                                                             |
+| `accessibilityLabel`           | `string \| undefined`           | `undefined`           | Spoken identity override; plain string children are inferred when absent.                                                                                                                          |
+| `accessibilityHint`            | `string \| undefined`           | `undefined`           | Optional explanation for ordinary assistive activation.                                                                                                                                            |
+| `accessibilityLongPressLabel`  | `string \| undefined`           | `undefined`           | Optional name for the eventless assistive long action.                                                                                                                                             |
 | `onPressIn`                    | `(event) => void`               | `undefined`           | Native press-in observer callback.                                                                                                                                                                 |
 | `onPressOut`                   | `(event) => void`               | `undefined`           | Native press-out observer callback.                                                                                                                                                                |
 | `onPressedIn`                  | `() => void`                    | `undefined`           | Fires after committed eligibility is revalidated and before press-down visual work starts.                                                                                                         |
@@ -309,26 +318,57 @@ The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonP
 | `onProgressStart`              | `() => void`                    | `undefined`           | Fires when progress mode transitions into loading.                                                                                                                                                 |
 | `onProgressEnd`                | `() => void`                    | `undefined`           | Fires when progress mode finishes and the button releases.                                                                                                                                         |
 
-### ThemedButton Additional Props
+### ThemedButton
 
-| Attribute     | Type                   | Default     | Description                                                                                            |
-| ------------- | ---------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
-| `config`      | `ThemeDefinition`      | `undefined` | Explicit theme object. When provided, it takes precedence over `name` and `index`.                     |
-| `flat`        | `boolean`              | `false`     | Requests the `flat` theme variant when available, including while disabled.                            |
-| `index`       | `number \| null`       | `null`      | Theme index used by `getTheme(index)` when `config` and `name` are not provided.                       |
-| `name`        | `ThemeName \| null`    | `null`      | Named built-in theme selector. Falls back safely to `basic` if invalid.                                |
-| `size`        | `ButtonSize`           | `medium`    | Built-in theme size preset: `icon`, `small`, `medium`, or `large`.                                     |
-| `transparent` | `boolean`              | `false`     | Makes the visible shell layers transparent while keeping content, press, and progress feedback active. |
-| `autoWidth`   | `boolean`              | `undefined` | Canonical intrinsic-width decision. An explicit value wins over the legacy `width="auto"` sentinel.    |
-| `type`        | `AwesomeButtonVariant` | `primary`   | Built-in variant request, including canonical `x`.                                                     |
+`ThemedButton` accepts the `AwesomeButton` props plus these theme-resolution
+props.
 
-## Compatibility Bridge and Future Major Migration
+| Attribute     | Type                           | Default     | Description                                                                                            |
+| ------------- | ------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `config`      | `AwesomeButtonThemeDefinition` | `undefined` | Explicit theme object. When provided, it takes precedence over `name` and `index`.                     |
+| `flat`        | `boolean`                      | `false`     | Requests the `flat` theme variant when available, including while disabled.                            |
+| `index`       | `number \| null`               | `null`      | Theme index used by `getTheme(index)` when `config` and `name` are not provided.                       |
+| `name`        | `ThemeName \| null`            | `null`      | Named built-in theme selector. Falls back safely to `basic` if invalid.                                |
+| `size`        | `ButtonSize`                   | `medium`    | Built-in theme size preset: `icon`, `small`, `medium`, or `large`.                                     |
+| `transparent` | `boolean`                      | `false`     | Makes the visible shell layers transparent while keeping content, press, and progress feedback active. |
+| `autoWidth`   | `boolean`                      | `undefined` | Canonical intrinsic-width decision. An explicit value wins over the legacy `width="auto"` sentinel.    |
+| `type`        | `AwesomeButtonVariant`         | `primary`   | Built-in variant request, including canonical `x`.                                                     |
 
-Pass 4 keeps v3.1 behavior callable while making the shared vocabulary
-available. Bridge fields win conflicts; no implicit parity mode changes legacy
-geometry or defaults.
+## Interaction and Lifecycle
 
-| Current field             | Canonical replacement                      | Pass 4 behavior                                                                        |
+Physical presses, long presses, keyboard activation, and accessibility actions
+share one eligibility, debounce, and one-shot progress contract. Callback
+replacements committed before dispatch remain live; release and accepted
+progress-completion callbacks are captured when their transition begins.
+Disablement, placeholder entry, pointer cancellation, and unmount terminate an
+active gesture once without dispatching a stale activation.
+
+## Accessibility, Reduced Motion, and Numeric Validation
+
+The button exposes one native button element. Atomic accessibility activation
+shares debounce and progress ownership without fabricating held
+`onPressIn`/`onPressOut` callbacks. Disabled, busy, and placeholder states
+remove package activation actions. Custom content that does not provide a
+plain string should supply `accessibilityLabel`.
+
+Reduced Motion snaps package-owned press, release, style, size, text,
+placeholder, and progress presentation while preserving callback ordering,
+debounce, long-press thresholds, and progress completion ownership. A progress
+run keeps its spinner/content lifecycle; `showProgressBar={false}` omits only
+the traveling/static face layer.
+
+Numeric inputs never throw: non-finite optional values act as absent,
+non-finite required values use their declared defaults, negative geometry and
+durations clamp to zero, and opacity clamps to `[0, 1]`. Fixed width zero stays
+an explicit constrained width.
+
+## React Native Compatibility and Migration
+
+The compatibility bridge keeps v3.1 behavior callable while making the shared
+vocabulary available. Bridge fields win conflicts; no implicit parity mode
+changes legacy geometry or defaults.
+
+| Current field             | Canonical replacement                      | Current behavior                                                                       |
 | ------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
 | outer `style`             | `containerStyle`                           | Both remain; `containerStyle` wins.                                                    |
 | `buttonStyle`             | future `style`                             | Typed canonical visual bridge; rename is deferred to a major.                          |
@@ -367,25 +407,6 @@ legacy `height` meaning and default geometry, 100 ms press fallback when no
 bridge timing is supplied, and optional non-spring release behavior. This
 release does not claim complete family parity.
 
-## Accessibility, Motion, and Numeric Inputs
-
-The button exposes one native button element. Atomic accessibility activation
-shares debounce and progress ownership without fabricating held
-`onPressIn`/`onPressOut` callbacks. Disabled, busy, and placeholder states
-remove package activation actions. Custom content that does not provide a
-plain string should supply `accessibilityLabel`.
-
-Reduced Motion snaps package-owned press, release, style, size, text,
-placeholder, and progress presentation while preserving callback ordering,
-debounce, long-press thresholds, and progress completion ownership. A progress
-run keeps its spinner/content lifecycle; `showProgressBar={false}` omits only
-the traveling/static face layer.
-
-Numeric inputs never throw: non-finite optional values act as absent,
-non-finite required values use their declared defaults, negative geometry and
-durations clamp to zero, and opacity clamps to `[0, 1]`. Fixed width zero stays
-an explicit constrained width.
-
 ## Development
 
 Root quality gates:
@@ -412,31 +433,36 @@ yarn demo:web
 
 The Expo demo resolves `@rcaferati/react-native-awesome-button` to the local `src/` folder, so you can iterate on the library without publishing it first.
 
-## Demo
+## Demo Application
 
 The `demo/` app is an Expo SDK 52 compatibility harness for:
 
-- common themed buttons across all registered themes
-- progress buttons
-- variant transition examples
-- text transition examples
-- size animation parity examples
-- empty placeholder states
-- flat button variants
-- before / after / icon content
-- auto-width and stretch examples
-- social variants
-- extra-content button compositions
+- the `Themed` tab, covering every registered theme, placeholder and flat
+  states, before/after/icon slots, auto-width, stretch, and extra content
+- the `Progress` tab, covering progress ownership and completion
+- the `Social` tab, covering every social visual variant
+- the `Size Changes` tab, covering variant, text, and geometry transitions
 
 See [`demo/README.md`](./demo/README.md) for demo-specific instructions.
 
+## Awesome Button Family
+
+Awesome Button is maintained as four native packages that share product
+semantics while following each platform's implementation model:
+
+- [React Native Awesome Button](https://github.com/rcaferati/react-native-awesome-button)
+- [Flutter Awesome Button](https://github.com/rcaferati/flutter_awesome_button)
+- [Kotlin Awesome Button](https://github.com/rcaferati/kotlin-awesome-button)
+- [Swift Awesome Button](https://github.com/rcaferati/swift-awesome-button)
+
 ## Author
 
-**Rafael Caferati**  
-Website: https://caferati.dev  
-LinkedIn: https://linkedin.com/in/rcaferati  
-Instagram: https://instagram.com/rcaferati
+Created and maintained by [Rafael Caferati](https://caferati.dev).
+
+- [GitHub](https://github.com/rcaferati)
+- [LinkedIn](https://linkedin.com/in/rcaferati)
+- [Instagram](https://instagram.com/rcaferati)
 
 ## License
 
-MIT.
+MIT. See [LICENSE](LICENSE).
