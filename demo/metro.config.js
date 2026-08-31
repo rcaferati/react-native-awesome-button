@@ -6,9 +6,14 @@ const pak = require('../package.json');
 
 const root = path.resolve(__dirname, '..');
 
-const modules = Object.keys({
-  ...pak.peerDependencies,
-});
+const modules = Array.from(
+  new Set([
+    ...Object.keys(pak.peerDependencies),
+    // Expo aliases `react-native` to this package for web. Source files live
+    // outside the demo root, so expose the alias target through Metro too.
+    'react-native-web',
+  ])
+);
 
 const defaultConfig = getDefaultConfig(__dirname);
 

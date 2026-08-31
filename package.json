@@ -1,6 +1,7 @@
 {
   "name": "@rcaferati/react-native-awesome-button",
   "version": "3.1.0",
+  "packageManager": "yarn@4.5.1",
   "description": "React Native button component that renders a 60fps animated set of progress-enabled 3D buttons.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
@@ -10,15 +11,23 @@
   "files": [
     "src",
     "lib",
+    "CHANGELOG.md",
+    "MIGRATION.md",
     "!**/__tests__",
     "!**/__fixtures__",
     "!**/__mocks__"
   ],
   "scripts": {
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"scripts/**/*.{js,ts}\" \"*.{json,md}\"",
     "test": "node -r ./scripts/jest-node-compat.js ./node_modules/jest/bin/jest.js --watchman=false",
     "typescript": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"scripts/**/*.ts\"",
     "prepare": "bob build",
+    "api:report": "api-extractor run --local",
+    "api:check": "api-extractor run",
+    "api:docs": "node scripts/check-api-docs.js",
+    "pack:check": "node scripts/check-pack.js",
+    "release:check": "yarn format:check && yarn lint && yarn typescript && yarn test --runInBand --coverage && yarn prepare && yarn api:check && yarn api:docs && yarn pack:check",
     "release": "release-it",
     "demo": "yarn --cwd demo start",
     "demo:android": "yarn --cwd demo android",
@@ -50,7 +59,8 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@rcaferati/wac": "1.2.0"
+    "@rcaferati/wac": "1.2.0",
+    "graphemer": "1.4.0"
   },
   "devDependencies": {
     "@arkweid/lefthook": "^0.7.7",
@@ -58,6 +68,7 @@
     "@babel/eslint-parser": "^7.18.2",
     "@babel/runtime": "^7.28.4",
     "@commitlint/config-conventional": "^17.0.2",
+    "@microsoft/api-extractor": "7.59.0",
     "@react-native-community/eslint-config": "^3.0.2",
     "@react-native/babel-preset": "0.76.0",
     "@release-it/conventional-changelog": "^5.0.0",

@@ -13,7 +13,7 @@ import ThemeScreen from '../screens/ThemeScreen';
 import Sizing from '../screens/Sizing';
 import Social from '../screens/Social';
 import Progress from '../screens/Progress';
-import { Entypo, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import DemoIcon from '../icons/DemoIcon';
 import type { DemoTabParamList, DemoThemeStackParamList } from '../types';
 
 const Tab = createBottomTabNavigator<DemoTabParamList>();
@@ -141,23 +141,25 @@ function App() {
         screenOptions={({ route }) => ({
           tabBarIcon: ({ color }: { color: string }) => {
             if (route.name === 'Themed Buttons') {
-              return <FontAwesome5 name="brush" size={21} color={color} />;
+              return <DemoIcon name="paintbrush" size={21} color={color} />;
             }
 
             if (route.name === 'Progress') {
-              return <Entypo name="progress-two" size={21} color={color} />;
+              return <DemoIcon name="gauge" size={21} color={color} />;
             }
 
             if (route.name === 'Sizing') {
               return (
-                <Ionicons name="resize-sharp" size={21} color={color} />
+                <DemoIcon
+                  name="up-right-and-down-left-from-center"
+                  size={21}
+                  color={color}
+                />
               );
             }
 
             if (route.name === 'Social') {
-              return (
-                <Ionicons name="share-social-sharp" size={21} color={color} />
-              );
+              return <DemoIcon name="share-nodes" size={21} color={color} />;
             }
 
             return null;
@@ -167,13 +169,17 @@ function App() {
         })}
       >
         <Tab.Screen
-          options={{ headerShown: false }}
+          options={{ headerShown: false, tabBarLabel: 'Themed' }}
           name="Themed Buttons"
           component={HomeNavigator}
         />
-        <Tab.Screen name="Sizing" component={Sizing} />
         <Tab.Screen name="Progress" component={Progress} />
         <Tab.Screen name="Social" component={Social} />
+        <Tab.Screen
+          options={{ tabBarLabel: 'Size Changes' }}
+          name="Sizing"
+          component={Sizing}
+        />
       </Tab.Navigator>
     </NavigationContainer>
   );

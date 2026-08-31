@@ -1,4 +1,5 @@
 import React from 'react';
+import { Animated } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import AwesomeButton from '../Button';
 
@@ -52,6 +53,7 @@ describe('AwesomeButton', () => {
     const element = component.root.findByProps({ testID: 'aws-btn-bottom' });
 
     expect(element.props.style[1].height).toBe(height - raiseLevel);
+    expect(element.type).toBe(Animated.View);
     expect(element.props.testID).toBe('aws-btn-bottom');
   });
 
@@ -115,21 +117,32 @@ describe('AwesomeButton', () => {
       );
     });
 
-    const container = component.root.findByProps({ testID: 'aws-btn-content-2' });
-    const hiddenMeasure = component.root.findByProps({
-      testID: 'aws-btn-hidden-measure',
+    const container = component.root.findByProps({
+      testID: 'aws-btn-content-2',
     });
-
     expect(container.props.style[1].width).toBeUndefined();
 
     act(() => {
-      hiddenMeasure.props.onLayout({
-        nativeEvent: {
-          layout: {
-            width: 132,
+      component.root
+        .findByProps({ testID: 'aws-btn-hidden-measure' })
+        .props.onLayout({
+          nativeEvent: {
+            layout: {
+              width: 132,
+            },
           },
-        },
-      });
+        });
+    });
+    act(() => {
+      component.root
+        .findByProps({ testID: 'aws-btn-hidden-measure' })
+        .props.onLayout({
+          nativeEvent: {
+            layout: {
+              width: 132,
+            },
+          },
+        });
     });
 
     expect(

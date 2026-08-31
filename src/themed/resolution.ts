@@ -7,9 +7,9 @@ import {
   DEFAULT_TEXT_COLOR,
 } from '../constants';
 import type {
-  ButtonVariant,
+  AwesomeButtonThemeDefinition,
+  AwesomeButtonVariant,
   ThemeButtonStyle,
-  ThemeDefinition,
   ThemeName,
 } from '../types';
 
@@ -49,12 +49,20 @@ const TRANSPARENT_STYLES: ThemeButtonStyle = {
 };
 
 const resolveButtonType = (
-  theme: ThemeDefinition,
+  theme: AwesomeButtonThemeDefinition,
   disabled: boolean | undefined,
   flat: boolean,
-  type: ButtonVariant
+  type: AwesomeButtonVariant
 ) => {
-  const requestedType = disabled ? 'disabled' : flat === true ? 'flat' : type;
+  const flatRequested = flat === true || type === 'flat';
+  const requestedType = flatRequested ? 'flat' : disabled ? 'disabled' : type;
+
+  if (requestedType === 'x') {
+    if (Object.prototype.hasOwnProperty.call(theme.buttons, 'x')) return 'x';
+    if (Object.prototype.hasOwnProperty.call(theme.buttons, 'twitter')) {
+      return 'twitter';
+    }
+  }
 
   return Object.prototype.hasOwnProperty.call(theme.buttons, requestedType)
     ? requestedType
@@ -64,7 +72,7 @@ const resolveButtonType = (
 const getThemeSourceDescriptor = (
   index: number | null,
   name: ThemeName | null,
-  config?: ThemeDefinition
+  config?: AwesomeButtonThemeDefinition
 ) => {
   if (config) {
     return 'config';

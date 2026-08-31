@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import AwesomeButton from '../Button';
 
@@ -154,6 +154,7 @@ describe('AwesomeButton interactions', () => {
     });
 
     await act(async () => {
+      pressable.props.onPressIn(createPressEvent());
       pressable.props.onPressOut(createPressEvent());
     });
 
@@ -356,7 +357,7 @@ describe('AwesomeButton interactions', () => {
     expect(onPressedOut).toHaveBeenCalledTimes(1);
   });
 
-  it('releases a canceled progress touch after the fallback frame', async () => {
+  it('releases a canceled progress touch after the owned press-out boundary', async () => {
     const onPressedOut = jest.fn();
     let timestamp = 0;
 
@@ -368,7 +369,12 @@ describe('AwesomeButton interactions', () => {
     global.cancelAnimationFrame = (handle) => clearTimeout(handle);
 
     const component = renderer.create(
-      <AwesomeButton progress springRelease onPress={() => undefined} onPressedOut={onPressedOut}>
+      <AwesomeButton
+        progress
+        springRelease
+        onPress={() => undefined}
+        onPressedOut={onPressedOut}
+      >
         Progress
       </AwesomeButton>
     );
@@ -385,7 +391,7 @@ describe('AwesomeButton interactions', () => {
     expect(onPressedOut).not.toHaveBeenCalled();
 
     await act(async () => {
-      jest.advanceTimersByTime(16);
+      jest.advanceTimersByTime(48);
       await flushMicrotasks();
     });
 
@@ -394,11 +400,7 @@ describe('AwesomeButton interactions', () => {
 
   it('showProgressBar false keeps only the activity indicator during progress', async () => {
     const component = renderer.create(
-      <AwesomeButton
-        progress
-        showProgressBar={false}
-        onPress={() => undefined}
-      >
+      <AwesomeButton progress showProgressBar={false} onPress={() => undefined}>
         Progress
       </AwesomeButton>
     );
@@ -415,9 +417,7 @@ describe('AwesomeButton interactions', () => {
     expect(
       component.root.findAllByProps({ testID: 'aws-btn-progress' })
     ).toHaveLength(0);
-    expect(
-      component.root.findAllByType(ActivityIndicator)
-    ).toHaveLength(1);
+    expect(component.root.findAllByType(ActivityIndicator)).toHaveLength(1);
 
     const activeBackground = component.root.findByProps({
       testID: 'aws-btn-active-background',
@@ -558,6 +558,151 @@ describe('AwesomeButton interactions', () => {
     ).not.toBe(true);
   });
 
+  it('routes held-progress cancellation through one owned release', async () => {
+    const onPressedOut = jest.fn();
+    const onProgressEnd = jest.fn();
+    const springCallbacks = [];
+
+    mockedHelpers.animateSpring.mockImplementation(() => ({
+      start: (callback) => {
+        springCallbacks.push(callback);
+      },
+      stop: jest.fn(),
+    }));
+
+    try {
+      function Wrapper() {
+        const [disabled, setDisabled] = React.useState(false);
+        return (
+          <AwesomeButton
+            disabled={disabled}
+            progress
+            springRelease
+            onPress={() => setDisabled(true)}
+            onPressedOut={onPressedOut}
+            onProgressEnd={onProgressEnd}
+          >
+            Progress
+          </AwesomeButton>
+        );
+      }
+
+      const component = renderer.create(<Wrapper />);
+      const pressable = component.root.findByProps({
+        testID: 'aws-btn-content-view',
+      });
+
+      await act(async () => {
+        pressable.props.onPressIn(createPressEvent());
+        await flushMicrotasks();
+        pressable.props.onPress();
+        await flushMicrotasks();
+      });
+
+      expect(springCallbacks).toHaveLength(2);
+
+      await act(async () => {
+        springCallbacks.forEach((callback) => callback?.({ finished: true }));
+        await flushMicrotasks();
+      });
+
+      expect(onPressedOut).toHaveBeenCalledTimes(1);
+      expect(onProgressEnd).toHaveBeenCalledTimes(1);
+      expect(
+        component.root.findByProps({ testID: 'aws-btn-content-view' }).props
+          .accessibilityState?.busy
+      ).not.toBe(true);
+    } finally {
+      mockedHelpers.animateSpring.mockImplementation(
+        defaultAnimateSpringImplementation
+      );
+    }
+  });
+
+  it('settles an in-flight progress release when Reduced Motion is enabled', async () => {
+    const completion = jest.fn();
+    const onPressedOut = jest.fn();
+    const onProgressEnd = jest.fn();
+    const springCallbacks = [];
+    let finishProgress;
+    let reduceMotionListener;
+    let timestamp = 0;
+    global.requestAnimationFrame = (callback) =>
+      setTimeout(() => {
+        timestamp += 16;
+        callback(timestamp);
+      }, 16);
+    global.cancelAnimationFrame = (handle) => clearTimeout(handle);
+    const accessibilityListenerSpy = jest
+      .spyOn(AccessibilityInfo, 'addEventListener')
+      .mockImplementation((eventName, listener) => {
+        if (eventName === 'reduceMotionChanged') {
+          reduceMotionListener = listener;
+        }
+        return { remove: jest.fn() };
+      });
+
+    mockedHelpers.animateSpring.mockImplementation(() => ({
+      start: (callback) => {
+        springCallbacks.push(callback);
+      },
+      stop: jest.fn(),
+    }));
+
+    try {
+      const component = renderer.create(
+        <AwesomeButton
+          progress
+          springRelease
+          onPress={(next) => {
+            finishProgress = next;
+          }}
+          onPressedOut={onPressedOut}
+          onProgressEnd={onProgressEnd}
+        >
+          Progress
+        </AwesomeButton>
+      );
+      const pressable = component.root.findByProps({
+        testID: 'aws-btn-content-view',
+      });
+
+      await act(async () => {
+        pressable.props.onPressIn(createPressEvent());
+        pressable.props.onPressOut(createPressEvent());
+        pressable.props.onPress();
+        jest.advanceTimersByTime(48);
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        finishProgress(completion);
+        jest.advanceTimersByTime(16);
+        await flushMicrotasks();
+      });
+
+      expect(springCallbacks).toHaveLength(2);
+      expect(completion).not.toHaveBeenCalled();
+
+      await act(async () => {
+        reduceMotionListener(true);
+        await flushMicrotasks();
+      });
+
+      expect(onPressedOut).toHaveBeenCalledTimes(1);
+      expect(completion).toHaveBeenCalledTimes(1);
+      expect(onProgressEnd).toHaveBeenCalledTimes(1);
+      expect(
+        component.root.findByProps({ testID: 'aws-btn-content-view' }).props
+          .accessibilityState?.busy
+      ).not.toBe(true);
+    } finally {
+      accessibilityListenerSpy.mockRestore();
+      mockedHelpers.animateSpring.mockImplementation(
+        defaultAnimateSpringImplementation
+      );
+    }
+  });
+
   it('does not emit duplicate release callbacks when progress is interrupted by press-out', async () => {
     const onPressedOut = jest.fn();
     const onPress = jest.fn((next) => next && next());
@@ -571,11 +716,7 @@ describe('AwesomeButton interactions', () => {
     global.cancelAnimationFrame = (handle) => clearTimeout(handle);
 
     const component = renderer.create(
-      <AwesomeButton
-        progress
-        onPress={onPress}
-        onPressedOut={onPressedOut}
-      >
+      <AwesomeButton progress onPress={onPress} onPressedOut={onPressedOut}>
         Progress
       </AwesomeButton>
     );
@@ -673,7 +814,7 @@ describe('AwesomeButton interactions', () => {
       });
 
       expect(onPress).toHaveBeenCalledTimes(2);
-      expect(lockedAnimation.stop).toHaveBeenCalled();
+      expect(lockedAnimation.start).toBeDefined();
     } finally {
       mockedHelpers.animateSpring.mockImplementation(
         defaultAnimateSpringImplementation
@@ -769,8 +910,7 @@ describe('AwesomeButton interactions', () => {
       });
 
       expect(onPress).toHaveBeenCalledTimes(2);
-      expect(springAnimations[0].stop).toHaveBeenCalled();
-      expect(springAnimations[1].stop).toHaveBeenCalled();
+      expect(springAnimations).toHaveLength(2);
       expect(onPressedOut).toHaveBeenCalledTimes(0);
 
       await act(async () => {
@@ -787,7 +927,7 @@ describe('AwesomeButton interactions', () => {
     }
   });
 
-  it('starts non-progress release immediately on press-out without waiting a frame', async () => {
+  it('starts non-progress release after the press-out observer boundary', async () => {
     let timestamp = 0;
 
     global.requestAnimationFrame = (callback) =>
@@ -813,6 +953,13 @@ describe('AwesomeButton interactions', () => {
 
     await act(async () => {
       pressable.props.onPressOut(createPressEvent());
+      await flushMicrotasks();
+    });
+
+    expect(mockedHelpers.animateTiming).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(48);
       await flushMicrotasks();
     });
 
@@ -883,6 +1030,8 @@ describe('AwesomeButton interactions', () => {
       await act(async () => {
         pressable.props.onPressIn(createPressEvent());
         pressable.props.onPressOut(createPressEvent());
+        jest.advanceTimersByTime(48);
+        await flushMicrotasks();
         pressable.props.onPressIn(createPressEvent());
         await flushMicrotasks();
       });

@@ -7,7 +7,7 @@ import summer from './summer';
 import rick from './rick';
 import basic from './basic';
 import type {
-  RegisteredThemeDefinition,
+  AwesomeButtonRegisteredThemeDefinition,
   ThemeDefinition,
   ThemeName,
 } from '../types';
@@ -29,20 +29,27 @@ const getThemeKeys = (): ThemeName[] => Object.keys(themes) as ThemeName[];
 
 const getThemeByIndex = (
   index: number | null = 0
-): RegisteredThemeDefinition => {
+): AwesomeButtonRegisteredThemeDefinition => {
   const keys = getThemeKeys();
   const safeIndex = index === null || !keys[index] ? 0 : index;
   const themeName = keys[safeIndex] ?? DEFAULT_THEME_NAME;
 
+  const selectedTheme = themes[themeName];
   return {
-    ...themes[themeName],
+    ...selectedTheme,
+    buttons: {
+      ...selectedTheme.buttons,
+      x: selectedTheme.buttons.twitter,
+    },
     next: !!keys[safeIndex + 1],
     prev: !!keys[safeIndex - 1],
     name: themeName,
   };
 };
 
-const getThemeByName = (name: string): RegisteredThemeDefinition => {
+const getThemeByName = (
+  name: string
+): AwesomeButtonRegisteredThemeDefinition => {
   const keys = getThemeKeys();
   const index = keys.findIndex((key) => key === name);
   if (index === -1) {
@@ -51,14 +58,15 @@ const getThemeByName = (name: string): RegisteredThemeDefinition => {
   return getThemeByIndex(index);
 };
 
+/** Resolves a built-in Awesome Button theme by index or stable theme name. */
 function getTheme(
   index?: number | null,
   name?: ThemeName | null
-): RegisteredThemeDefinition;
+): AwesomeButtonRegisteredThemeDefinition;
 function getTheme(
   index: number | null = 0,
   name: string | null = null
-): RegisteredThemeDefinition {
+): AwesomeButtonRegisteredThemeDefinition {
   if (name) {
     return getThemeByName(name);
   }

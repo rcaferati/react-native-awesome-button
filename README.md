@@ -1,6 +1,8 @@
 # React Native Awesome Button
 
-`@rcaferati/react-native-awesome-button` is the current npm package for this repo.
+`@rcaferati/react-native-awesome-button` brings the Awesome Button interaction,
+progress, sizing, and theme system to React Native with native `Pressable`,
+accessibility, and animation behavior.
 
 The library exports:
 
@@ -9,22 +11,23 @@ The library exports:
 - `getTheme`
 - explicit TypeScript types such as `AwesomeButtonProps`, `ThemedButtonProps`, `ButtonWidth`, `ThemeName`, `ButtonVariant`, and `ButtonSize`
 
-| <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-blue-new.gif" /> | <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-rick.gif" /> | <img width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-cartman.gif" /> |
-| --- | --- | --- |
+| <img alt="Blue Awesome Button theme demo" width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-blue-new.gif" /> | <img alt="Rick Awesome Button theme demo" width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-rick.gif" /> | <img alt="Cartman Awesome Button theme demo" width="240" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/demo-button-cartman.gif" /> |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
-## Install
+## Live Demo
 
 Try the live package demo on [expo.dev](https://snack.expo.dev/@rcaferati/react-native-awesome-button).
 
-[<img src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/expo-demo.png" width="800" />](https://snack.expo.dev/@rcaferati/react-native-awesome-button)
+[<img alt="Open the React Native Awesome Button live Expo demo" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/expo-demo.png" width="800" />](https://snack.expo.dev/@rcaferati/react-native-awesome-button)
 
 ## Figma File
 
-Import the button visuals directly into your [Figma](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue) project.
+Explore the shared Awesome Button visual system in the [Figma design file](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue). The Figma file is a visual design reference; this package's documentation defines its behavior, accessibility, and public API contract.
 
-[<img src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/figma.png" width="800" />](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue)
+[<img alt="Awesome Button components in the shared Figma design file" src="https://raw.githubusercontent.com/rcaferati/react-native-awesome-button/master/assets/figma.png" width="800" />](https://www.figma.com/file/Ug8sNPzmevU3ZQus9Klu5aHq/react-awesome-button-theme-blue)
 
-## Install
+## Installation
+
 ```bash
 npm install @rcaferati/react-native-awesome-button
 ```
@@ -46,22 +49,27 @@ export function SaveButton() {
 
 `AwesomeButton` supports both plain string labels and arbitrary React Native content.
 
-## Size Changes
+## Features
+
+### Size Changes
 
 `animateSize` is enabled by default.
 
-- fixed-size `width` / `height` changes animate with `125ms cubic-bezier(0.3, 0.05, 0.2, 1)`
+- fixed-size changes animate with the package's 175 ms size transition
 - auto-width string labels grow and shrink when their measured target width changes
 - with `textTransition` plus auto width:
-  - wider labels grow first, then animate text
-  - narrower labels animate text first, then shrink
-- `animateSize={false}` keeps size changes instant
+  - wider labels start growing immediately and begin text at 30% of the text timeline
+  - narrower labels begin text immediately and start shrinking at 30%
+  - every transient grapheme frame is measured before it is shown, so an unconstrained auto-width label cannot wrap or clip
+- without `textTransition`, wider labels keep the fitting source visible until the target fits; the target remains clipped to one line until a matching native layout commit confirms physical-pixel fit, while narrower labels swap before width shrinks
+- fixed, stretch, and externally constrained transitions stay on one clipped line; stable labels regain normal wrapping after settlement
+- text scrambling uses Unicode grapheme clusters, metric-aware Latin pools, a 7 ms slot stagger, and a native frame clock
+- `animateSize={false}` settles target geometry before text begins; Reduced Motion settles both immediately
+- accessibility keeps exposing the stable target label rather than randomized visual frames
 - fixed-to-auto and auto-to-fixed changes remain instant in `3.1.0`
 
 ```tsx
-import AwesomeButton, {
-  ThemedButton,
-} from '@rcaferati/react-native-awesome-button';
+import { ThemedButton } from '@rcaferati/react-native-awesome-button';
 
 export function SizeExample({
   isLong,
@@ -74,8 +82,12 @@ export function SizeExample({
 
   return (
     <>
-      <AwesomeButton textTransition>{label}</AwesomeButton>
-      <AwesomeButton animateSize={false}>{label}</AwesomeButton>
+      <ThemedButton name="basic" autoWidth textTransition>
+        {label}
+      </ThemedButton>
+      <ThemedButton name="basic" autoWidth animateSize={false}>
+        {label}
+      </ThemedButton>
       <ThemedButton name="rick" size={size}>
         {size}
       </ThemedButton>
@@ -84,7 +96,7 @@ export function SizeExample({
 }
 ```
 
-## Progress Buttons
+### Progress Buttons
 
 When `progress` is enabled, `onPress` receives a `next` callback. Call it when your work is done to complete the progress animation and release the button.
 
@@ -107,7 +119,7 @@ export function SubmitButton() {
 }
 ```
 
-## Themed Buttons
+### Themed Buttons
 
 ```tsx
 import { ThemedButton } from '@rcaferati/react-native-awesome-button';
@@ -144,7 +156,7 @@ export function ThemeConfigExample() {
 
 `getTheme()` safely falls back to the default `basic` theme if the provided index or name is invalid.
 
-## Before / After / Extra Content
+### Before / After / Extra Content
 
 Use `before` and `after` for inline content that should animate with the label, and `extra` for content rendered behind the button body.
 
@@ -172,7 +184,7 @@ export function ButtonContentExample() {
 }
 ```
 
-## Transparent Buttons
+### Transparent Buttons
 
 `transparent` is supported on `ThemedButton`. It removes the visible shell layers while preserving the content, hit target, and active/progress feedback.
 
@@ -209,6 +221,7 @@ export function TransparentExample() {
 - `danger`
 - `disabled`
 - `flat`
+- `x` (canonical request-only bridge)
 - `twitter`
 - `messenger`
 - `facebook`
@@ -219,7 +232,15 @@ export function TransparentExample() {
 - `pinterest`
 - `youtube`
 
-Unknown variants fall back safely at runtime instead of crashing, but only the variants above are part of the typed built-in API.
+`x` is the canonical social request. The legacy closed `ButtonVariant` and
+`SocialButtonVariant` unions still contain `twitter` so exhaustive v3.1
+consumers remain source-compatible; `ThemedButtonProps.type` accepts the
+request-only `AwesomeButtonVariant` bridge, which adds `x`. A custom theme's
+optional `x` style wins for an `x` request and otherwise falls back to its
+required legacy `twitter` style. A `twitter` request continues to use the
+legacy key.
+
+Unknown variants fall back safely at runtime instead of crashing.
 
 ### Sizes
 
@@ -228,87 +249,177 @@ Unknown variants fall back safely at runtime instead of crashing, but only the v
 - `medium`
 - `large`
 
-## Selected Props
+## API Reference
 
-The public prop surface is typed through `AwesomeButtonProps` and `ThemedButtonProps`.
+The tables below cover the primary consumer-facing props. The checked-in
+[API Extractor report](etc/react-native-awesome-button.api.md) and exported
+`AwesomeButtonProps` / `ThemedButtonProps` types are the complete public
+TypeScript reference.
 
-### AwesomeButton Props
+### AwesomeButton
 
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `activityColor` | `string` | `#FFFFFF` | Activity indicator color shown during progress mode. |
-| `activeOpacity` | `number` | `1` | Opacity applied while the button is pressed. |
-| `animatedPlaceholder` | `boolean` | `true` | Enables the shimmer loop when the button has no `children`. |
-| `animateSize` | `boolean` | `true` | Animates fixed-size geometry changes and auto-width string-label changes. |
-| `backgroundActive` | `string` | `rgba(0, 0, 0, 0.15)` | Active overlay color rendered over the face while pressed. |
-| `backgroundColor` | `string` | `#c0c0c0` | Main front-face background color. |
-| `backgroundDarker` | `string` | `#9f9f9f` | Bottom-face background color used for the raised 3D effect. |
-| `backgroundPlaceholder` | `string` | `rgba(0, 0, 0, 0.15)` | Placeholder bar background color when the button is empty. |
-| `backgroundProgress` | `string` | `rgba(0, 0, 0, 0.15)` | Progress bar background color used during `progress` mode. |
-| `backgroundShadow` | `string` | `rgba(0, 0, 0, 0.15)` | Shadow layer background color. |
-| `before` | `ReactNode` | `null` | Content rendered before the main label inside the button face. |
-| `after` | `ReactNode` | `null` | Content rendered after the main label inside the button face. |
-| `extra` | `ReactNode` | `null` | Content rendered behind the active/content layers, useful for gradients and custom backgrounds. |
-| `children` | `ReactNode` | `null` | Button label or custom content. Plain string labels also support `textTransition`. |
-| `borderColor` | `string` | `undefined` | Front-face border color. |
-| `borderRadius` | `number` | `4` | Shared border radius applied to the button face and lower layers. |
-| `borderBottomLeftRadius` | `number` | `undefined` | Bottom-left radius override. |
-| `borderBottomRightRadius` | `number` | `undefined` | Bottom-right radius override. |
-| `borderTopLeftRadius` | `number` | `undefined` | Top-left radius override. |
-| `borderTopRightRadius` | `number` | `undefined` | Top-right radius override. |
-| `borderWidth` | `number` | `0` | Front-face border width. |
-| `dangerouslySetPressableProps` | `AwesomeButtonPressableProps` | `{}` | Escape hatch for extra `Pressable` props. Core `onPress`, `onPressIn`, and `onPressOut` remain owned by the component. |
-| `debouncedPressTime` | `number` | `0` | Debounces `onPress` in milliseconds. |
-| `disabled` | `boolean` | `false` | Disables interactions and marks the internal `Pressable` as disabled. |
-| `height` | `number` | `60` | Base button height before padding and raise-level adjustments. |
-| `hitSlop` | `PressableProps['hitSlop']` | `undefined` | Optional press target expansion. |
-| `paddingHorizontal` | `number` | `16` | Horizontal content padding. |
-| `paddingTop` | `number` | `0` | Additional top padding for the content row. |
-| `paddingBottom` | `number` | `0` | Additional bottom padding for the content row. |
-| `progress` | `boolean` | `false` | Enables the progress-button flow. `onPress` receives a `next` callback in this mode. |
-| `progressLoadingTime` | `number` | `3000` | Duration of the loading bar animation in progress mode. |
-| `showProgressBar` | `boolean` | `true` | Keeps the progress indicator visible while the button is in loading mode. |
-| `raiseLevel` | `number` | `4` | Vertical raise distance used to render the 3D depth effect. |
-| `springRelease` | `boolean` | `true` | Uses spring-based release animation instead of timing-based release. |
-| `stretch` | `boolean` | `false` | Makes the button fill the available horizontal space. |
-| `style` | `StyleProp<ViewStyle>` | `undefined` | Extra style applied to the outer animated container. |
-| `textColor` | `string` | `#FFFFFF` | Default label text color. |
-| `textFontFamily` | `string` | `undefined` | Optional font family for string labels. |
-| `textLineHeight` | `number` | `20` | Placeholder bar height and string label line-height baseline. |
-| `textSize` | `number` | `14` | Default font size for string labels. |
-| `textTransition` | `boolean` | `false` | Enables the built-in scramble/reveal animation for plain string labels. In auto-width mode, wider labels grow first and narrower labels shrink last. |
-| `width` | `number \| 'auto' \| null` | `null` | Fixed width, measured auto width (`null` / `'auto'`), or pair with `stretch` for full width. Auto-width string labels can now both grow and shrink. |
-| `onPress` | `(next?) => void` | `() => undefined` | Main press callback. In `progress` mode it receives the completion handler. |
-| `onLongPress` | `PressableProps['onLongPress']` | `undefined` | Native long-press callback forwarded to `Pressable`. |
-| `onPressIn` | `(event) => void` | `() => undefined` | Native press-in observer callback. |
-| `onPressOut` | `(event) => void` | `() => undefined` | Native press-out observer callback. |
-| `onPressedIn` | `() => void` | `() => undefined` | Fires after the internal press-in animation completes. |
-| `onPressedOut` | `() => void` | `() => undefined` | Fires after the internal release animation completes. |
-| `onProgressStart` | `() => void` | `() => undefined` | Fires when progress mode transitions into loading. |
-| `onProgressEnd` | `() => void` | `() => undefined` | Fires when progress mode finishes and the button releases. |
+| Attribute                      | Type                            | Default               | Description                                                                                                                                                                                        |
+| ------------------------------ | ------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `activityColor`                | `string`                        | `#FFFFFF`             | Activity indicator color shown during progress mode.                                                                                                                                               |
+| `activeOpacity`                | `number`                        | `1`                   | Opacity applied while the button is pressed.                                                                                                                                                       |
+| `animatedPlaceholder`          | `boolean`                       | `true`                | Enables the shimmer loop when the button has no `children`.                                                                                                                                        |
+| `animateSize`                  | `boolean`                       | `true`                | Animates fixed-size geometry changes and auto-width string-label changes.                                                                                                                          |
+| `backgroundActive`             | `string`                        | `rgba(0, 0, 0, 0.15)` | Active overlay color rendered over the face while pressed.                                                                                                                                         |
+| `backgroundColor`              | `string`                        | `#c0c0c0`             | Main front-face background color.                                                                                                                                                                  |
+| `backgroundDarker`             | `string`                        | `#9f9f9f`             | Bottom-face background color used for the raised 3D effect.                                                                                                                                        |
+| `backgroundPlaceholder`        | `string`                        | `rgba(0, 0, 0, 0.15)` | Placeholder bar background color when the button is empty.                                                                                                                                         |
+| `backgroundProgress`           | `string`                        | `rgba(0, 0, 0, 0.15)` | Progress bar background color used during `progress` mode.                                                                                                                                         |
+| `backgroundShadow`             | `string`                        | `rgba(0, 0, 0, 0.15)` | Shadow layer background color.                                                                                                                                                                     |
+| `before`                       | `ReactNode`                     | `null`                | Content rendered before the main label inside the button face.                                                                                                                                     |
+| `after`                        | `ReactNode`                     | `null`                | Content rendered after the main label inside the button face.                                                                                                                                      |
+| `extra`                        | `ReactNode`                     | `null`                | Content rendered behind the active/content layers, useful for gradients and custom backgrounds.                                                                                                    |
+| `children`                     | `ReactNode`                     | `null`                | Button label or custom content. Plain string labels also support `textTransition`.                                                                                                                 |
+| `borderColor`                  | `string`                        | `undefined`           | Front-face border color.                                                                                                                                                                           |
+| `borderRadius`                 | `number`                        | `4`                   | Shared border radius applied to the button face and lower layers.                                                                                                                                  |
+| `borderBottomLeftRadius`       | `number`                        | `undefined`           | Bottom-left radius override.                                                                                                                                                                       |
+| `borderBottomRightRadius`      | `number`                        | `undefined`           | Bottom-right radius override.                                                                                                                                                                      |
+| `borderTopLeftRadius`          | `number`                        | `undefined`           | Top-left radius override.                                                                                                                                                                          |
+| `borderTopRightRadius`         | `number`                        | `undefined`           | Top-right radius override.                                                                                                                                                                         |
+| `borderWidth`                  | `number`                        | `0`                   | Front-face border width.                                                                                                                                                                           |
+| `dangerouslySetPressableProps` | `AwesomeButtonPressableProps`   | `{}`                  | Escape hatch for extra `Pressable` props. Core `onPress`, `onPressIn`, and `onPressOut` remain owned by the component.                                                                             |
+| `debouncedPressTime`           | `number`                        | `0`                   | Debounces `onPress` in milliseconds.                                                                                                                                                               |
+| `disabled`                     | `boolean`                       | `false`               | Disables interactions and marks the internal `Pressable` as disabled.                                                                                                                              |
+| `height`                       | `number`                        | `60`                  | Legacy shell height before padding. Its moving face is the shell height minus the resolved raise amount.                                                                                           |
+| `faceHeight`                   | `number`                        | `undefined`           | Canonical moving-face height bridge. Wins over legacy `height`.                                                                                                                                    |
+| `hitSlop`                      | `PressableProps['hitSlop']`     | `undefined`           | Optional press target expansion.                                                                                                                                                                   |
+| `paddingHorizontal`            | `number`                        | `16`                  | Horizontal content padding.                                                                                                                                                                        |
+| `paddingTop`                   | `number`                        | `0`                   | Additional top padding for the content row.                                                                                                                                                        |
+| `paddingBottom`                | `number`                        | `0`                   | Additional bottom padding for the content row.                                                                                                                                                     |
+| `progress`                     | `boolean`                       | `false`               | Enables the progress-button flow. `onPress` receives a `next` callback in this mode.                                                                                                               |
+| `progressLoadingTime`          | `number`                        | `3000`                | Duration of the loading bar animation in progress mode.                                                                                                                                            |
+| `showProgressBar`              | `boolean`                       | `true`                | Shows or hides the face progress layer. The spinner, busy state, callbacks, and completion handle remain active when false.                                                                        |
+| `raiseLevel`                   | `number`                        | `4`                   | Vertical raise distance used to render the 3D depth effect.                                                                                                                                        |
+| `springRelease`                | `boolean`                       | `true`                | Uses spring-based release animation instead of timing-based release.                                                                                                                               |
+| `stretch`                      | `boolean`                       | `false`               | Makes the button fill the available horizontal space.                                                                                                                                              |
+| `style`                        | `StyleProp<ViewStyle>`          | `undefined`           | Extra style applied to the outer animated container.                                                                                                                                               |
+| `containerStyle`               | `StyleProp<ViewStyle>`          | `undefined`           | Canonical outer layout style. Applied after legacy outer `style`.                                                                                                                                  |
+| `buttonStyle`                  | `AwesomeButtonStyle`            | `undefined`           | Canonical visual bridge. Its fields win over legacy top-level visual aliases; `animationDuration` owns direct resolved-palette changes and `pressInAnimationDuration` overrides press-down timing. |
+| `textColor`                    | `string`                        | `#FFFFFF`             | Default label text color.                                                                                                                                                                          |
+| `textFontFamily`               | `string`                        | `undefined`           | Optional font family for string labels.                                                                                                                                                            |
+| `textLineHeight`               | `number`                        | `20`                  | Placeholder bar height and the resolved line height applied to visible and measured string labels.                                                                                                 |
+| `textSize`                     | `number`                        | `14`                  | Default font size for string labels.                                                                                                                                                               |
+| `textTransition`               | `boolean`                       | `false`               | Enables the measured, grapheme-aware scramble/reveal animation for nonempty string-label replacements. Transient frames are one line; Reduced Motion settles immediately.                          |
+| `width`                        | `number \| 'auto' \| null`      | `null`                | Fixed width, measured auto width (`null` / `'auto'`), or pair with `stretch` for full width. Auto-width string labels can now both grow and shrink.                                                |
+| `onPress`                      | `(next?) => void`               | `undefined`           | Main press callback. In `progress` mode it receives the completion handler.                                                                                                                        |
+| `onLongPress`                  | `PressableProps['onLongPress']` | `undefined`           | Deprecated physical-only callback that receives the real press event.                                                                                                                              |
+| `onLongPressAction`            | `() => void`                    | `undefined`           | Eventless physical and assistive long action. Wins over legacy eventful `onLongPress`.                                                                                                             |
+| `accessibilityLabel`           | `string \| undefined`           | `undefined`           | Spoken identity override; plain string children are inferred when absent.                                                                                                                          |
+| `accessibilityHint`            | `string \| undefined`           | `undefined`           | Optional explanation for ordinary assistive activation.                                                                                                                                            |
+| `accessibilityLongPressLabel`  | `string \| undefined`           | `undefined`           | Optional name for the eventless assistive long action.                                                                                                                                             |
+| `onPressIn`                    | `(event) => void`               | `undefined`           | Native press-in observer callback.                                                                                                                                                                 |
+| `onPressOut`                   | `(event) => void`               | `undefined`           | Native press-out observer callback.                                                                                                                                                                |
+| `onPressedIn`                  | `() => void`                    | `undefined`           | Fires after committed eligibility is revalidated and before press-down visual work starts.                                                                                                         |
+| `onPressedOut`                 | `() => void`                    | `undefined`           | Fires after the internal release animation completes.                                                                                                                                              |
+| `onProgressStart`              | `() => void`                    | `undefined`           | Fires when progress mode transitions into loading.                                                                                                                                                 |
+| `onProgressEnd`                | `() => void`                    | `undefined`           | Fires when progress mode finishes and the button releases.                                                                                                                                         |
 
-### ThemedButton Additional Props
+### ThemedButton
 
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `config` | `ThemeDefinition` | `undefined` | Explicit theme object. When provided, it takes precedence over `name` and `index`. |
-| `flat` | `boolean` | `false` | Requests the `flat` theme variant when available. |
-| `index` | `number \| null` | `null` | Theme index used by `getTheme(index)` when `config` and `name` are not provided. |
-| `name` | `ThemeName \| null` | `null` | Named built-in theme selector. Falls back safely to `basic` if invalid. |
-| `size` | `ButtonSize` | `medium` | Built-in theme size preset: `icon`, `small`, `medium`, or `large`. |
-| `transparent` | `boolean` | `false` | Makes the visible shell layers transparent while keeping content, press, and progress feedback active. |
-| `type` | `ButtonVariant` | `primary` | Built-in variant to resolve from the selected theme. |
+`ThemedButton` accepts the `AwesomeButton` props plus these theme-resolution
+props.
+
+| Attribute     | Type                           | Default     | Description                                                                                            |
+| ------------- | ------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `config`      | `AwesomeButtonThemeDefinition` | `undefined` | Explicit theme object. When provided, it takes precedence over `name` and `index`.                     |
+| `flat`        | `boolean`                      | `false`     | Requests the `flat` theme variant when available, including while disabled.                            |
+| `index`       | `number \| null`               | `null`      | Theme index used by `getTheme(index)` when `config` and `name` are not provided.                       |
+| `name`        | `ThemeName \| null`            | `null`      | Named built-in theme selector. Falls back safely to `basic` if invalid.                                |
+| `size`        | `ButtonSize`                   | `medium`    | Built-in theme size preset: `icon`, `small`, `medium`, or `large`.                                     |
+| `transparent` | `boolean`                      | `false`     | Makes the visible shell layers transparent while keeping content, press, and progress feedback active. |
+| `autoWidth`   | `boolean`                      | `undefined` | Canonical intrinsic-width decision. An explicit value wins over the legacy `width="auto"` sentinel.    |
+| `type`        | `AwesomeButtonVariant`         | `primary`   | Built-in variant request, including canonical `x`.                                                     |
+
+## Interaction and Lifecycle
+
+Physical presses, long presses, keyboard activation, and accessibility actions
+share one eligibility, debounce, and one-shot progress contract. Callback
+replacements committed before dispatch remain live; release and accepted
+progress-completion callbacks are captured when their transition begins.
+Disablement, placeholder entry, pointer cancellation, and unmount terminate an
+active gesture once without dispatching a stale activation.
+
+## Accessibility, Reduced Motion, and Numeric Validation
+
+The button exposes one native button element. Atomic accessibility activation
+shares debounce and progress ownership without fabricating held
+`onPressIn`/`onPressOut` callbacks. Disabled, busy, and placeholder states
+remove package activation actions. Custom content that does not provide a
+plain string should supply `accessibilityLabel`.
+
+Reduced Motion snaps package-owned press, release, style, size, text,
+placeholder, and progress presentation while preserving callback ordering,
+debounce, long-press thresholds, and progress completion ownership. A progress
+run keeps its spinner/content lifecycle; `showProgressBar={false}` omits only
+the traveling/static face layer.
+
+Numeric inputs never throw: non-finite optional values act as absent,
+non-finite required values use their declared defaults, negative geometry and
+durations clamp to zero, and opacity clamps to `[0, 1]`. Fixed width zero stays
+an explicit constrained width.
+
+## React Native Compatibility and Migration
+
+The compatibility bridge keeps v3.1 behavior callable while making the shared
+vocabulary available. Bridge fields win conflicts; no implicit parity mode
+changes legacy geometry or defaults.
+
+| Current field             | Canonical replacement                      | Current behavior                                                                       |
+| ------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| outer `style`             | `containerStyle`                           | Both remain; `containerStyle` wins.                                                    |
+| `buttonStyle`             | future `style`                             | Typed canonical visual bridge; rename is deferred to a major.                          |
+| legacy `height`           | `faceHeight` (future `height`)             | Legacy stack geometry remains; `faceHeight` wins when supplied.                        |
+| `width="auto"`            | `autoWidth={true}`                         | Sentinel remains; an explicit `autoWidth` decision wins.                               |
+| eventful `onLongPress`    | `onLongPressAction` (future `onLongPress`) | Legacy callback is physical-only; the eventless bridge owns assistive long activation. |
+| `backgroundDarker`        | `buttonStyle.depthColor`                   | Legacy alias remains at lower precedence.                                              |
+| `backgroundShadow`        | `buttonStyle.shadowColor`                  | Legacy alias remains at lower precedence.                                              |
+| `textColor`               | `buttonStyle.foregroundColor`              | Legacy alias remains at lower precedence.                                              |
+| `raiseLevel`              | `buttonStyle.raiseAmount`                  | Legacy alias remains at lower precedence.                                              |
+| `borderLeftBottomRadius`  | `buttonStyle.borderBottomLeftRadius`       | Misspelled alias remains at lower precedence.                                          |
+| `activityColor`           | `buttonStyle.activityColor`                | Legacy alias remains at lower precedence.                                              |
+| `activeOpacity`           | `buttonStyle.activeOpacity`                | Legacy alias remains at lower precedence.                                              |
+| `backgroundActive`        | `buttonStyle.backgroundActive`             | Legacy alias remains at lower precedence.                                              |
+| `backgroundColor`         | `buttonStyle.backgroundColor`              | Legacy alias remains at lower precedence.                                              |
+| `backgroundPlaceholder`   | `buttonStyle.backgroundPlaceholder`        | Legacy alias remains at lower precedence.                                              |
+| `backgroundProgress`      | `buttonStyle.backgroundProgress`           | Legacy alias remains at lower precedence.                                              |
+| `borderColor`             | `buttonStyle.borderColor`                  | Legacy alias remains at lower precedence.                                              |
+| `borderRadius`            | `buttonStyle.borderRadius`                 | Legacy alias remains at lower precedence.                                              |
+| `borderTopLeftRadius`     | `buttonStyle.borderTopLeftRadius`          | Legacy alias remains at lower precedence.                                              |
+| `borderTopRightRadius`    | `buttonStyle.borderTopRightRadius`         | Legacy alias remains at lower precedence.                                              |
+| `borderBottomLeftRadius`  | `buttonStyle.borderBottomLeftRadius`       | Legacy alias remains at lower precedence.                                              |
+| `borderBottomRightRadius` | `buttonStyle.borderBottomRightRadius`      | Legacy alias remains at lower precedence.                                              |
+| `borderWidth`             | `buttonStyle.borderWidth`                  | Legacy alias remains at lower precedence.                                              |
+| `paddingHorizontal`       | `buttonStyle.paddingHorizontal`            | Legacy alias remains at lower precedence.                                              |
+| `paddingTop`              | `buttonStyle.paddingTop`                   | Legacy alias remains at lower precedence.                                              |
+| `paddingBottom`           | `buttonStyle.paddingBottom`                | Legacy alias remains at lower precedence.                                              |
+| `textFontFamily`          | `buttonStyle.textFontFamily`               | Legacy alias remains at lower precedence.                                              |
+| `textLineHeight`          | `buttonStyle.textLineHeight`               | Legacy alias remains at lower precedence.                                              |
+| `textSize`                | `buttonStyle.textSize`                     | Legacy alias remains at lower precedence.                                              |
+| `springRelease`           | native release spring                      | Both legacy values remain; the optional non-spring path is noncanonical debt.          |
+| `twitter`                 | request-only `x`                           | Legacy closed unions/maps stay unchanged; removal requires a reviewed major migration. |
+
+React Native still has explicit cross-platform debt: its legacy outer `style`,
+legacy `height` meaning and default geometry, 100 ms press fallback when no
+bridge timing is supplied, and optional non-spring release behavior. This
+release does not claim complete family parity.
 
 ## Development
 
 Root quality gates:
 
 ```bash
-yarn test
-yarn typescript
-yarn lint
-yarn prepare
+yarn release:check
 ```
+
+The aggregate checks formatting, ESLint, TypeScript, package-owned Jest tests
+with informational coverage, the built package, reviewed API report, exported
+TSDoc summaries, and the npm tarball shape. It does not publish or modify the
+API baseline. See [`CONTRIBUTING.md`](CONTRIBUTING.md),
+[`MIGRATION.md`](MIGRATION.md), and [`PERFORMANCE.md`](PERFORMANCE.md).
 
 Demo app commands:
 
@@ -322,31 +433,36 @@ yarn demo:web
 
 The Expo demo resolves `@rcaferati/react-native-awesome-button` to the local `src/` folder, so you can iterate on the library without publishing it first.
 
-## Demo
+## Demo Application
 
 The `demo/` app is an Expo SDK 52 compatibility harness for:
 
-- common themed buttons across all registered themes
-- progress buttons
-- variant transition examples
-- text transition examples
-- size animation parity examples
-- empty placeholder states
-- flat button variants
-- before / after / icon content
-- auto-width and stretch examples
-- social variants
-- extra-content button compositions
+- the `Themed` tab, covering every registered theme, placeholder and flat
+  states, before/after/icon slots, auto-width, stretch, and extra content
+- the `Progress` tab, covering progress ownership and completion
+- the `Social` tab, covering every social visual variant
+- the `Size Changes` tab, covering variant, text, and geometry transitions
 
 See [`demo/README.md`](./demo/README.md) for demo-specific instructions.
 
+## Awesome Button Family
+
+Awesome Button is maintained as four native packages that share product
+semantics while following each platform's implementation model:
+
+- [React Native Awesome Button](https://github.com/rcaferati/react-native-awesome-button)
+- [Flutter Awesome Button](https://github.com/rcaferati/flutter_awesome_button)
+- [Kotlin Awesome Button](https://github.com/rcaferati/kotlin-awesome-button)
+- [Swift Awesome Button](https://github.com/rcaferati/swift-awesome-button)
+
 ## Author
 
-**Rafael Caferati**  
-Website: https://caferati.dev  
-LinkedIn: https://linkedin.com/in/rcaferati  
-Instagram: https://instagram.com/rcaferati
+Created and maintained by [Rafael Caferati](https://caferati.dev).
+
+- [GitHub](https://github.com/rcaferati)
+- [LinkedIn](https://linkedin.com/in/rcaferati)
+- [Instagram](https://instagram.com/rcaferati)
 
 ## License
 
-MIT.
+MIT. See [LICENSE](LICENSE).

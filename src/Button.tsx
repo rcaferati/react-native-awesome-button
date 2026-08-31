@@ -1,18 +1,12 @@
 import React, { useMemo, useRef } from 'react';
 import {
-  ActivityIndicator,
   Animated,
-  Pressable,
-  PressableProps,
-  Text,
-  View,
+  I18nManager,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
-import { getStyles, styles } from './styles';
 import usePressProgressController from './usePressProgressController';
-import useButtonSizeBehavior, {
-  getHiddenMeasurementContainerStyle,
-  getHiddenMeasurementTextStyle,
-} from './useButtonSizeBehavior';
+import useButtonSizeBehavior from './useButtonSizeBehavior';
 import {
   ANIMATED_TIMING_LOADING,
   DEFAULT_ACTIVITY_COLOR,
@@ -32,39 +26,32 @@ import {
   DEFAULT_TEXT_SIZE,
   DEFAULT_WIDTH,
 } from './constants';
-import Placeholder from './Placeholder';
 import type { AwesomeButtonProps } from './types';
+import useReducedMotion from './useReducedMotion';
+import useResolvedStyleTransition from './useResolvedStyleTransition';
+import ButtonInteractionSurface from './button/ButtonInteractionSurface';
+import ButtonVisualLayers from './button/ButtonVisualLayers';
+import { normalizeButtonInputs } from './button/normalizeButtonInputs';
+import { resolveButtonPresentationTargets } from './button/resolveButtonPresentationTargets';
 
 /**
+ * Compatibility alias for the core Awesome Button props.
+ *
  * @deprecated Use AwesomeButtonProps instead.
+ * @public
  */
 export type ButtonTypes = AwesomeButtonProps;
 
-const getMergedAccessibilityState = (
-  accessibilityState: PressableProps['accessibilityState'],
-  {
-    busy,
-    disabled,
-  }: {
-    busy: boolean;
-    disabled: boolean;
-  }
-) => {
-  const nextState = {
-    ...accessibilityState,
-  };
-
-  if (disabled || nextState.disabled !== undefined) {
-    nextState.disabled = Boolean(disabled || nextState.disabled);
-  }
-
-  if (busy || nextState.busy !== undefined) {
-    nextState.busy = Boolean(busy || nextState.busy);
-  }
-
-  return Object.keys(nextState).length > 0 ? nextState : undefined;
+type AwesomeButtonInternalProps = AwesomeButtonProps & {
+  /** The themed owner already supplies interpolated style frames. */
+  __styleFramesArePreInterpolated?: boolean;
 };
 
+/**
+ * Renders the core animated Awesome Button interaction surface.
+ *
+ * @public
+ */
 const AwesomeButton = ({
   activityColor = DEFAULT_ACTIVITY_COLOR,
   activeOpacity = DEFAULT_ACTIVE_OPACITY,
@@ -80,6 +67,7 @@ const AwesomeButton = ({
   borderRadius = DEFAULT_BORDER_RADIUS,
   borderBottomLeftRadius,
   borderBottomRightRadius,
+  borderLeftBottomRadius,
   borderTopLeftRadius,
   borderTopRightRadius,
   borderWidth = DEFAULT_BORDER_WIDTH,
@@ -87,18 +75,25 @@ const AwesomeButton = ({
   before = null,
   after = null,
   disabled = false,
+  buttonStyle,
+  containerStyle,
+  faceHeight,
   height = DEFAULT_HEIGHT,
   hitSlop,
   debouncedPressTime = DEFAULT_DEBOUNCED_PRESS_TIME,
   paddingHorizontal = DEFAULT_HORIZONTAL_PADDING,
-  onPress = () => undefined,
-  onPressIn = () => undefined,
-  onPressedIn = () => undefined,
-  onPressOut = () => undefined,
-  onPressedOut = () => undefined,
-  onProgressStart = () => undefined,
-  onProgressEnd = () => undefined,
+  onPress,
+  onPressIn,
+  onPressedIn,
+  onPressOut,
+  onPressedOut,
+  onProgressStart,
+  onProgressEnd,
   onLongPress,
+  onLongPressAction,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityLongPressLabel,
   dangerouslySetPressableProps = {},
   progress = false,
   showProgressBar = true,
@@ -116,8 +111,139 @@ const AwesomeButton = ({
   textFontFamily,
   width: rawWidth = DEFAULT_WIDTH,
   extra = null,
-}: AwesomeButtonProps) => {
-  const width = rawWidth === 'auto' ? null : rawWidth;
+  __styleFramesArePreInterpolated = false,
+}: AwesomeButtonInternalProps) => {
+  const reduceMotion = useReducedMotion();
+  const { fontScale } = useWindowDimensions();
+  const hasRenderableChildren = React.Children.toArray(children).length > 0;
+  const hasPrimitiveTextChild =
+    typeof children === 'string' || typeof children === 'number';
+  const normalizedInputs = normalizeButtonInputs({
+    activeOpacity,
+    borderBottomLeftRadius,
+    borderBottomRightRadius,
+    borderLeftBottomRadius,
+    borderRadius,
+    borderTopLeftRadius,
+    borderTopRightRadius,
+    borderWidth,
+    buttonStyle,
+    debouncedPressTime,
+    faceHeight,
+    fontScale,
+    hasPrimitiveTextChild,
+    height,
+    paddingBottom,
+    paddingHorizontal,
+    paddingTop,
+    progressLoadingTime,
+    raiseLevel,
+    textLineHeight,
+    textSize,
+    width: rawWidth,
+  });
+  const presentationTargets = resolveButtonPresentationTargets({
+    activityColor,
+    backgroundActive,
+    backgroundColor,
+    backgroundDarker,
+    backgroundPlaceholder,
+    backgroundProgress,
+    backgroundShadow,
+    borderColor,
+    buttonStyle,
+    disabled,
+    normalized: normalizedInputs,
+    platform: Platform.OS,
+    textColor,
+    textFontFamily,
+  });
+  const {
+    activeOpacity: resolvedActiveOpacity,
+    animationDuration: resolvedAnimationDuration,
+    debouncedPressTime: resolvedDebouncedPressTime,
+    pressInAnimationDuration: resolvedPressInAnimationDuration,
+    progressLoadingTime: resolvedProgressLoadingTime,
+  } = presentationTargets.interaction;
+  const {
+    height: resolvedGeometryHeight,
+    paddingBottom: normalizedPaddingBottom,
+    paddingHorizontal: normalizedPaddingHorizontal,
+    paddingTop: normalizedPaddingTop,
+    raiseAmount: normalizedRaiseAmount,
+    width,
+  } = presentationTargets.geometry;
+  const {
+    textFontFamily: resolvedTextFontFamily,
+    textLineHeight: normalizedTextLineHeight,
+  } = presentationTargets.content;
+  const { minimumTarget } = presentationTargets.accessibility;
+  const target = presentationTargets.palette;
+  const targetPalette = useMemo(
+    () => ({
+      activityColor: target.activityColor,
+      backgroundActive: target.backgroundActive,
+      backgroundColor: target.backgroundColor,
+      backgroundDarker: target.backgroundDarker,
+      backgroundPlaceholder: target.backgroundPlaceholder,
+      backgroundProgress: target.backgroundProgress,
+      backgroundShadow: target.backgroundShadow,
+      borderColor: target.borderColor,
+      borderRadius: target.borderRadius,
+      borderBottomLeftRadius: target.borderBottomLeftRadius,
+      borderBottomRightRadius: target.borderBottomRightRadius,
+      borderTopLeftRadius: target.borderTopLeftRadius,
+      borderTopRightRadius: target.borderTopRightRadius,
+      borderWidth: target.borderWidth,
+      contentGap: target.contentGap,
+      textColor: target.textColor,
+      textSize: target.textSize,
+    }),
+    [
+      target.activityColor,
+      target.backgroundActive,
+      target.backgroundColor,
+      target.backgroundDarker,
+      target.backgroundPlaceholder,
+      target.backgroundProgress,
+      target.backgroundShadow,
+      target.borderColor,
+      target.borderRadius,
+      target.borderBottomLeftRadius,
+      target.borderBottomRightRadius,
+      target.borderTopLeftRadius,
+      target.borderTopRightRadius,
+      target.borderWidth,
+      target.contentGap,
+      target.textColor,
+      target.textSize,
+    ]
+  );
+  const {
+    activityColor: resolvedActivityColor,
+    backgroundActive: resolvedBackgroundActive,
+    backgroundColor: resolvedBackgroundColor,
+    backgroundDarker: resolvedBackgroundDarker,
+    backgroundPlaceholder: resolvedBackgroundPlaceholder,
+    backgroundProgress: resolvedBackgroundProgress,
+    backgroundShadow: resolvedBackgroundShadow,
+    borderColor: resolvedBorderColor,
+    borderRadius: resolvedBorderRadius,
+    borderBottomLeftRadius: resolvedBorderBottomLeftRadius,
+    borderBottomRightRadius: resolvedBorderBottomRightRadius,
+    borderTopLeftRadius: resolvedBorderTopLeftRadius,
+    borderTopRightRadius: resolvedBorderTopRightRadius,
+    borderWidth: resolvedBorderWidth,
+    contentGap: resolvedContentGap,
+    textColor: resolvedTextColor,
+    textSize: resolvedTextSize,
+  } = useResolvedStyleTransition({
+    target: targetPalette,
+    duration: resolvedAnimationDuration ?? 140,
+    curve: buttonStyle?.animationCurve,
+    reduceMotion,
+    skipAnimation: __styleFramesArePreInterpolated,
+  });
   const loadingOpacity = useRef(new Animated.Value(1)).current;
   const textOpacity = useRef(new Animated.Value(1)).current;
   const activityOpacity = useRef(new Animated.Value(0)).current;
@@ -127,14 +253,45 @@ const AwesomeButton = ({
   const animatedOpacity = useRef(
     new Animated.Value(width === null && stretch !== true ? 0 : 1)
   ).current;
+  const textMeasurementSignature = useMemo(
+    () =>
+      JSON.stringify([
+        fontScale,
+        I18nManager.isRTL,
+        normalizedPaddingBottom,
+        normalizedPaddingHorizontal,
+        normalizedPaddingTop,
+        resolvedBorderWidth,
+        resolvedContentGap ?? 0,
+        resolvedTextFontFamily ?? null,
+        normalizedTextLineHeight,
+        resolvedTextSize,
+      ]),
+    [
+      fontScale,
+      normalizedPaddingBottom,
+      normalizedPaddingHorizontal,
+      normalizedPaddingTop,
+      normalizedTextLineHeight,
+      resolvedBorderWidth,
+      resolvedContentGap,
+      resolvedTextFontFamily,
+      resolvedTextSize,
+    ]
+  );
   const {
+    alignTextLogicalLeading,
     displayedText,
-    hiddenMeasurementKey,
-    hiddenMeasurementText,
+    measurementRequest,
+    onAfterLayout,
+    onBeforeLayout,
     onHiddenMeasurementLayout,
     onVisibleContentLayout,
+    onVisibleTextLayout,
     resolvedWidth,
     sizeAnimatedStyles,
+    transientTextFrame,
+    visibleTextPublicationId,
   } = useButtonSizeBehavior({
     after,
     animatedOpacity,
@@ -142,385 +299,137 @@ const AwesomeButton = ({
     before,
     children,
     extra,
-    height,
-    paddingBottom,
-    paddingTop,
-    raiseLevel,
+    height: resolvedGeometryHeight,
+    measurementSignature: textMeasurementSignature,
+    paddingBottom: normalizedPaddingBottom,
+    paddingTop: normalizedPaddingTop,
+    raiseLevel: normalizedRaiseAmount,
+    reduceMotion,
     stretch,
     textTransition,
     width,
   });
-  const { activity, handlePress, handlePressIn, handlePressOut } =
-    usePressProgressController({
-      activeOpacity,
-      animatedActive,
-      animatedLoading,
-      animatedOpacity,
-      animatedValue,
-      activityOpacity,
-      disabled,
-      hasChildren: Boolean(children),
-      loadingOpacity,
-      onPress,
-      onPressIn,
-      onPressOut,
-      onPressedIn,
-      onPressedOut,
-      onProgressEnd,
-      onProgressStart,
-      progress,
-      progressLoadingTime,
-      springRelease,
-      textOpacity,
-      debouncedPressTime,
-    });
-
   const {
-    accessibilityRole: dangerousAccessibilityRole,
-    accessibilityState: dangerousAccessibilityState,
-    children: _ignoredDangerousChildren,
-    hitSlop: dangerousHitSlop,
-    onLongPress: _ignoredDangerousOnLongPress,
-    onPress: _ignoredDangerousOnPress,
-    onPressIn: _ignoredDangerousOnPressIn,
-    onPressOut: _ignoredDangerousOnPressOut,
-    ...safePressableProps
-  } = dangerouslySetPressableProps as PressableProps & {
-    children?: React.ReactNode;
-  };
-  const dynamicStyles = useMemo(
-    () =>
-      getStyles({
-        backgroundActive,
-        backgroundColor,
-        backgroundDarker,
-        backgroundPlaceholder,
-        backgroundProgress,
-        backgroundShadow,
-        borderColor,
-        borderRadius,
-        borderBottomLeftRadius,
-        borderBottomRightRadius,
-        borderTopLeftRadius,
-        borderTopRightRadius,
-        borderWidth,
-        height,
-        paddingBottom,
-        paddingHorizontal,
-        paddingTop,
-        raiseLevel,
-        stateWidth: width === null && stretch !== true ? resolvedWidth : null,
-        stretch,
-        textColor,
-        textFontFamily,
-        textLineHeight,
-        textSize,
-        width,
-      }),
-    [
-      backgroundActive,
-      backgroundColor,
-      backgroundDarker,
-      backgroundPlaceholder,
-      backgroundProgress,
-      backgroundShadow,
-      borderColor,
-      borderRadius,
-      borderBottomLeftRadius,
-      borderBottomRightRadius,
-      borderTopLeftRadius,
-      borderTopRightRadius,
-      borderWidth,
-      height,
-      paddingBottom,
-      paddingHorizontal,
-      paddingTop,
-      raiseLevel,
-      resolvedWidth,
-      stretch,
-      textColor,
-      textFontFamily,
-      textLineHeight,
-      textSize,
-      width,
-    ]
-  );
-
-  const animatedValues = useMemo(() => {
-    const offsetWidth = resolvedWidth ? resolvedWidth * -1 : 0;
-
-    return {
-      animatedActivity: {
-        opacity: activityOpacity,
-        transform: [
-          {
-            scale: activityOpacity,
-          },
-        ],
-      },
-      animatedActive: {
-        opacity: animatedActive,
-      },
-      animatedContainer: {
-        opacity: animatedOpacity,
-      },
-      animatedContent: {
-        transform: [
-          {
-            translateY: animatedValue.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, raiseLevel],
-            }),
-          },
-        ],
-      },
-      animatedProgress: {
-        opacity: loadingOpacity,
-        transform: [
-          {
-            translateX: animatedLoading.interpolate({
-              inputRange: [0, 1],
-              outputRange: [offsetWidth, 0],
-            }),
-          },
-        ],
-      },
-      animatedShadow: {
-        transform: [
-          {
-            translateY: animatedValue.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, -raiseLevel / 2],
-            }),
-          },
-        ],
-      },
-    };
-  }, [
-    activityOpacity,
+    activity,
+    handleAtomicLongPress,
+    handlePress,
+    handlePressIn,
+    handlePressOut,
+  } = usePressProgressController({
+    activeOpacity: resolvedActiveOpacity,
     animatedActive,
     animatedLoading,
     animatedOpacity,
     animatedValue,
+    activityOpacity,
+    animationCurve: buttonStyle?.animationCurve,
+    animationDuration: resolvedAnimationDuration,
+    debouncedPressTime: resolvedDebouncedPressTime,
+    delayLongPress: dangerouslySetPressableProps.delayLongPress,
+    disabled,
+    hasChildren: hasRenderableChildren,
     loadingOpacity,
-    resolvedWidth,
-    raiseLevel,
-  ]);
-
-  const renderActivity = useMemo(() => {
-    if (activity === false) {
-      return null;
-    }
-
-    return (
-      <>
-        {showProgressBar === true ? (
-          <Animated.View
-            testID="aws-btn-progress"
-            style={[
-              styles.progress,
-              dynamicStyles.progress,
-              animatedValues.animatedProgress,
-            ]}
-          />
-        ) : null}
-        <Animated.View
-          testID="aws-btn-activity-indicator"
-          style={[styles.container__activity, animatedValues.animatedActivity]}
-        >
-          <ActivityIndicator color={activityColor} />
-        </Animated.View>
-      </>
-    );
-  }, [
-    activity,
-    activityColor,
-    animatedValues.animatedActivity,
-    animatedValues.animatedProgress,
-    dynamicStyles.progress,
+    onLongPress,
+    onLongPressAction,
+    onPress,
+    onPressIn,
+    onPressOut,
+    onPressedIn,
+    onPressedOut,
+    onProgressEnd,
+    onProgressStart,
+    pressInAnimationDuration: resolvedPressInAnimationDuration,
+    progress,
+    progressLoadingTime: resolvedProgressLoadingTime,
+    reduceMotion,
     showProgressBar,
-  ]);
-
-  const animatedStyles = useMemo(
-    () => ({
-      opacity: textOpacity,
-      transform: [
-        {
-          scale: textOpacity,
-        },
-      ],
-    }),
-    [textOpacity]
-  );
-
-  const hiddenMeasurementContainerStyle = useMemo(
-    () =>
-      getHiddenMeasurementContainerStyle({
-        borderWidth,
-        paddingBottom,
-        paddingHorizontal,
-        paddingTop,
-      }),
-    [borderWidth, paddingBottom, paddingHorizontal, paddingTop]
-  );
-
-  const hiddenMeasurementTextStyle = useMemo(
-    () =>
-      getHiddenMeasurementTextStyle({
-        textColor,
-        textFontFamily,
-        textLineHeight,
-        textSize,
-      }),
-    [textColor, textFontFamily, textLineHeight, textSize]
-  );
-
-  const renderContent = useMemo(() => {
-    if (!children) {
-      return (
-        <Placeholder
-          animated={animatedPlaceholder}
-          style={dynamicStyles.container__placeholder}
-        />
-      );
-    }
-
-    const content =
-      typeof children === 'string' ? (
-        <Text
-          testID="aws-btn-content-text"
-          style={[styles.container__text, dynamicStyles.container__text]}
-        >
-          {displayedText ?? children}
-        </Text>
-      ) : (
-        children
-      );
-
-    return (
-      <Animated.View
-        style={[
-          styles.container__view,
-          dynamicStyles.container__view,
-          animatedStyles,
-        ]}
-      >
-        {before}
-        {content}
-        {after}
-      </Animated.View>
-    );
-  }, [
-    after,
-    animatedPlaceholder,
-    animatedStyles,
-    before,
-    children,
-    displayedText,
-    dynamicStyles.container__placeholder,
-    dynamicStyles.container__text,
-    dynamicStyles.container__view,
-  ]);
-
-  const pressableHitSlop = hitSlop ?? dangerousHitSlop;
-  const accessibilityRole = dangerousAccessibilityRole ?? 'button';
-  const suppressProgressDarkening =
-    progress === true && activity === true && showProgressBar === false;
-  const accessibilityState = useMemo(
-    () =>
-      getMergedAccessibilityState(dangerousAccessibilityState, {
-        busy: activity,
-        disabled,
-      }),
-    [activity, dangerousAccessibilityState, disabled]
-  );
+    springRelease,
+    textOpacity,
+  });
 
   return (
-    <Pressable
-      testID="aws-btn-content-view"
-      {...safePressableProps}
-      accessibilityRole={accessibilityRole}
-      accessibilityState={accessibilityState}
-      hitSlop={pressableHitSlop}
-      onLongPress={onLongPress}
+    <ButtonInteractionSurface
+      accessibilityHint={accessibilityHint}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityLongPressLabel={accessibilityLongPressLabel}
+      activity={activity}
+      dangerouslySetPressableProps={dangerouslySetPressableProps}
+      disabled={disabled}
+      fallbackAccessibilityLabel={
+        hasPrimitiveTextChild ? String(children) : undefined
+      }
+      hasAccessibleLongPress={onLongPressAction !== undefined}
+      hasRenderableChildren={hasRenderableChildren}
+      hitSlop={hitSlop}
+      minimumTarget={minimumTarget}
+      onAtomicLongPress={handleAtomicLongPress}
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      stretch={stretch}
     >
-      <Animated.View
-        testID="aws-btn-content-2"
-        style={[
-          styles.container,
-          dynamicStyles.container,
-          animatedValues.animatedContainer,
-          sizeAnimatedStyles.container,
-          style,
-        ]}
+      <ButtonVisualLayers
+        activity={activity}
+        activityColor={resolvedActivityColor}
+        activityOpacity={activityOpacity}
+        after={after}
+        alignTextLogicalLeading={alignTextLogicalLeading}
+        animatedActive={animatedActive}
+        animatedLoading={animatedLoading}
+        animatedOpacity={animatedOpacity}
+        animatedPlaceholder={animatedPlaceholder}
+        animatedValue={animatedValue}
+        backgroundActive={resolvedBackgroundActive}
+        backgroundColor={resolvedBackgroundColor}
+        backgroundDarker={resolvedBackgroundDarker}
+        backgroundPlaceholder={resolvedBackgroundPlaceholder}
+        backgroundProgress={resolvedBackgroundProgress}
+        backgroundShadow={resolvedBackgroundShadow}
+        before={before}
+        borderBottomLeftRadius={resolvedBorderBottomLeftRadius}
+        borderBottomRightRadius={resolvedBorderBottomRightRadius}
+        borderColor={resolvedBorderColor}
+        borderRadius={resolvedBorderRadius}
+        borderTopLeftRadius={resolvedBorderTopLeftRadius}
+        borderTopRightRadius={resolvedBorderTopRightRadius}
+        borderWidth={resolvedBorderWidth}
+        containerStyle={containerStyle}
+        contentGap={resolvedContentGap}
+        displayedText={displayedText}
+        extra={extra}
+        hasPrimitiveTextChild={hasPrimitiveTextChild}
+        hasRenderableChildren={hasRenderableChildren}
+        height={resolvedGeometryHeight}
+        measurementRequest={measurementRequest}
+        loadingOpacity={loadingOpacity}
+        onAfterLayout={onAfterLayout}
+        onBeforeLayout={onBeforeLayout}
+        onHiddenMeasurementLayout={onHiddenMeasurementLayout}
+        onVisibleContentLayout={onVisibleContentLayout}
+        onVisibleTextLayout={onVisibleTextLayout}
+        paddingBottom={normalizedPaddingBottom}
+        paddingHorizontal={normalizedPaddingHorizontal}
+        paddingTop={normalizedPaddingTop}
+        progress={progress}
+        raiseAmount={normalizedRaiseAmount}
+        reduceMotion={reduceMotion}
+        resolvedWidth={resolvedWidth}
+        showProgressBar={showProgressBar}
+        sizeAnimatedStyles={sizeAnimatedStyles}
+        stretch={stretch}
+        style={style}
+        textColor={resolvedTextColor}
+        textFontFamily={resolvedTextFontFamily}
+        textLineHeight={normalizedTextLineHeight}
+        textOpacity={textOpacity}
+        textSize={resolvedTextSize}
+        transientTextFrame={transientTextFrame}
+        visibleTextPublicationId={visibleTextPublicationId}
+        width={width}
       >
-        <Animated.View
-          testID="aws-btn-shadow"
-          style={[
-            styles.shadow,
-            dynamicStyles.shadow,
-            animatedValues.animatedShadow,
-            sizeAnimatedStyles.shadow,
-          ]}
-        />
-        <View
-          testID="aws-btn-bottom"
-          style={[
-            styles.bottom,
-            dynamicStyles.bottom,
-            sizeAnimatedStyles.bottom,
-          ]}
-        />
-        <Animated.View
-          testID="aws-btn-content"
-          style={[
-            styles.content,
-            dynamicStyles.content,
-            animatedValues.animatedContent,
-            sizeAnimatedStyles.content,
-          ]}
-        >
-          <View
-            testID="aws-btn-text"
-            style={[styles.text, dynamicStyles.text]}
-            onLayout={onVisibleContentLayout}
-          >
-            {extra}
-            <Animated.View
-              testID="aws-btn-active-background"
-              style={[
-                styles.activeBackground,
-                dynamicStyles.activeBackground,
-                animatedValues.animatedActive,
-                sizeAnimatedStyles.activeBackground,
-                suppressProgressDarkening ? { opacity: 0 } : null,
-              ]}
-            />
-            {renderContent}
-            {renderActivity}
-          </View>
-        </Animated.View>
-        {hiddenMeasurementText !== null ? (
-          <View
-            key={hiddenMeasurementKey ?? undefined}
-            testID="aws-btn-hidden-measure"
-            pointerEvents="none"
-            style={hiddenMeasurementContainerStyle}
-            onLayout={onHiddenMeasurementLayout}
-          >
-            <Text
-              testID="aws-btn-hidden-measure-text"
-              style={hiddenMeasurementTextStyle}
-            >
-              {hiddenMeasurementText}
-            </Text>
-          </View>
-        ) : null}
-      </Animated.View>
-    </Pressable>
+        {children}
+      </ButtonVisualLayers>
+    </ButtonInteractionSurface>
   );
 };
 

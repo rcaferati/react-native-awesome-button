@@ -6,7 +6,7 @@ import {
 } from '@rcaferati/react-native-awesome-button';
 import Container from '../components/Container';
 import Section from '../components/Section';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DemoIcon from '../icons/DemoIcon';
 import type { ProgressDemoHandler, ProgressScreenProps } from '../types';
 
 export default function Progress({ navigation }: ProgressScreenProps) {
@@ -85,8 +85,9 @@ export default function Progress({ navigation }: ProgressScreenProps) {
           raiseLevel={6}
           borderRadius={60}
           size="icon"
+          accessibilityLabel="Send"
         >
-          <MaterialCommunityIcons name="send" size={24} color="#FFFFFF" />
+          <DemoIcon name="location-arrow" size={24} color="#FFFFFF" />
         </ThemedButton>
         <ThemedButton
           name={theme}
@@ -97,8 +98,9 @@ export default function Progress({ navigation }: ProgressScreenProps) {
           raiseLevel={0}
           borderRadius={60}
           size="icon"
+          accessibilityLabel="Facebook"
         >
-          <MaterialCommunityIcons name="facebook" size={24} color="#FFFFFF" />
+          <DemoIcon name="facebook-f" size={24} color="#FFFFFF" />
         </ThemedButton>
       </Section>
     </Container>

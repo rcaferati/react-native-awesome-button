@@ -1794,6 +1794,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo/metro-runtime@npm:~4.0.1":
+  version: 4.0.1
+  resolution: "@expo/metro-runtime@npm:4.0.1"
+  peerDependencies:
+    react-native: "*"
+  checksum: 10c0/bb50ce6143c153f9aa54185017366a3476f910867372271a29f7012355f9859576e128ac379924e7e86415ae4b5fac0687f751e0fbf85e201f00aed30671c29d
+  languageName: node
+  linkType: hard
+
 "@expo/osascript@npm:^2.1.6":
   version: 2.4.2
   resolution: "@expo/osascript@npm:2.4.2"
@@ -7346,7 +7355,7 @@ __metadata:
   resolution: "react-native-awesome-button-demo@workspace:."
   dependencies:
     "@babel/core": "npm:^7.20.0"
-    "@expo/vector-icons": "npm:~14.0.4"
+    "@expo/metro-runtime": "npm:~4.0.1"
     "@react-navigation/bottom-tabs": "npm:^7.15.9"
     "@react-navigation/native": "npm:^7.2.2"
     "@react-navigation/native-stack": "npm:^7.14.11"

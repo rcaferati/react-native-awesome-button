@@ -2,5 +2,7 @@
   "extends": "../tsconfig",
   "compilerOptions": {
     // Keep Expo from generating a separate tsconfig for the demo.
-  }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
 }
