@@ -1,8 +1,8 @@
 # Migration Guide
 
-## From 3.1.0 to the engineering-hardening bridge
+## From 3.1.0 to the 3.2.0 compatibility bridge
 
-This pass preserves every 3.1.0 call site while exposing the shared Awesome Button vocabulary. It does not silently enable a new geometry mode.
+Version 3.2.0 preserves every 3.1.0 call site while exposing the shared Awesome Button vocabulary. It does not silently enable a new geometry mode.
 
 | Existing API              | Bridge API                            | Current behavior                                                                                        | Future major intent                                                                  |
 | ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -39,4 +39,4 @@ This pass preserves every 3.1.0 call site while exposing the shared Awesome Butt
 
 React Native still retains its 3.1.0 direct geometry defaults and 100 ms press fallback. Other governed ports use the neutral 140 ms fallback. This remains explicit cross-platform debt rather than an implicit behavior change.
 
-No package version or release is selected by this document. Review the checked-in API report and `CHANGELOG.md` before adopting the bridge.
+Review the checked-in API report and `CHANGELOG.md` before adopting the 3.2.0 bridge.
