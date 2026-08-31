@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.2.0 - 2026-08-31
+
 - Added the typed `buttonStyle`, `containerStyle`, `faceHeight`, `autoWidth`, eventless `onLongPressAction`, accessibility text, and canonical `x` compatibility bridges without changing 3.1.0 legacy meanings.
 - Hardened callback freshness, cancellation, one-shot progress completion, teardown, Reduced Motion, large-text, RTL, and theme-transition ownership.
 - Added package-owned compatibility, lifecycle, sizing, accessibility, normalization, and theme regressions.
@@ -12,3 +14,7 @@
 - Hardened final label settlement with conservative physical-pixel fit and a generation-matched native text/layout acknowledgement before stable wrapping resumes.
 
 See [MIGRATION.md](./MIGRATION.md) for compatibility details and deferred major-version debt.
+
+This npm release also includes the size-transition work documented by the GitHub-only `v3.1.0`
+release. The previous npm `latest` version was `3.0.2`; no different source is being backfilled as
+`3.1.0`.
