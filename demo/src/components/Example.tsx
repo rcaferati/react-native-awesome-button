@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   ThemedButton,
   getTheme,
   type ButtonVariant,
   type ProgressCompletionHandler,
 } from '@rcaferati/react-native-awesome-button';
-import { AntDesign } from '@expo/vector-icons';
 import Container from './Container';
 import Section from './Section';
 import Character from './Character';
+import DemoIcon from '../icons/DemoIcon';
 import type { ProgressDemoHandler, ThemeExampleProps } from '../types';
 
 const TRANSITION_VARIANTS: ButtonVariant[] = [
@@ -168,10 +168,11 @@ export default function Example({ index }: ThemeExampleProps) {
               style={styles.transitionIconButton}
               type="flat"
               size="icon"
+              accessibilityLabel="Cycle variant"
               onPress={handleVariantTransitionPress}
             >
-              <AntDesign
-                name="swap"
+              <DemoIcon
+                name="right-left"
                 size={18}
                 color={theme.buttons.primary.backgroundColor ?? theme.color}
               />
@@ -193,10 +194,11 @@ export default function Example({ index }: ThemeExampleProps) {
               style={styles.transitionIconButton}
               type="flat"
               size="icon"
+              accessibilityLabel="Cycle text"
               onPress={handleTextTransitionPress}
             >
-              <AntDesign
-                name="stepforward"
+              <DemoIcon
+                name="forward-step"
                 size={18}
                 color={theme.buttons.primary.backgroundColor ?? theme.color}
               />
@@ -280,12 +282,12 @@ export default function Example({ index }: ThemeExampleProps) {
             style={styles.button}
             type="primary"
             size="medium"
+            buttonStyle={{ contentGap: 8 }}
             before={
-              <AntDesign
-                style={styles.iconLeft}
-                name="menufold"
-                size={21}
-                color={theme.buttons.primary.textColor}
+              <DemoIcon
+                name="bars"
+                size={24}
+                color={theme.buttons.primary.textColor ?? theme.color}
               />
             }
           >
@@ -294,12 +296,12 @@ export default function Example({ index }: ThemeExampleProps) {
           <ThemedButton
             config={theme}
             style={styles.button}
+            buttonStyle={{ contentGap: 8 }}
             after={
-              <AntDesign
-                style={styles.iconRight}
-                name="appstore-o"
-                size={21}
-                color={theme.buttons.anchor.textColor}
+              <DemoIcon
+                name="table-cells-large"
+                size={24}
+                color={theme.buttons.anchor.textColor ?? theme.color}
               />
             }
             type="anchor"
@@ -314,12 +316,12 @@ export default function Example({ index }: ThemeExampleProps) {
             style={styles.button}
             type="danger"
             size="medium"
+            buttonStyle={{ contentGap: 8 }}
             before={
-              <AntDesign
-                style={styles.iconLeft}
-                name="delete"
-                size={21}
-                color={theme.buttons.danger.textColor}
+              <DemoIcon
+                name="trash-can"
+                size={24}
+                color={theme.buttons.danger.textColor ?? theme.color}
               />
             }
           >
@@ -330,11 +332,12 @@ export default function Example({ index }: ThemeExampleProps) {
             style={styles.button}
             type="primary"
             size="icon"
+            accessibilityLabel="Add"
           >
-            <AntDesign
-              name="plussquareo"
-              size={21}
-              color={theme.buttons.primary.textColor}
+            <DemoIcon
+              name="square-plus"
+              size={24}
+              color={theme.buttons.primary.textColor ?? theme.color}
             />
           </ThemedButton>
           <ThemedButton
@@ -342,11 +345,12 @@ export default function Example({ index }: ThemeExampleProps) {
             style={styles.button}
             type="anchor"
             size="icon"
+            accessibilityLabel="Add user"
           >
-            <AntDesign
-              name="adduser"
-              size={21}
-              color={theme.buttons.anchor.textColor}
+            <DemoIcon
+              name="user-plus"
+              size={24}
+              color={theme.buttons.anchor.textColor ?? theme.color}
             />
           </ThemedButton>
           <ThemedButton
@@ -356,11 +360,12 @@ export default function Example({ index }: ThemeExampleProps) {
             style={styles.button}
             type="danger"
             size="icon"
+            accessibilityLabel="Delete"
           >
-            <AntDesign
-              name="delete"
-              size={21}
-              color={theme.buttons.danger.textColor}
+            <DemoIcon
+              name="trash-can"
+              size={24}
+              color={theme.buttons.danger.textColor ?? theme.color}
             />
           </ThemedButton>
         </Section>
@@ -425,8 +430,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
   },
-  iconLeft: { marginRight: 5 },
-  iconRight: { marginLeft: 5 },
   transitionControlRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -6,11 +6,7 @@ import {
 } from '@rcaferati/react-native-awesome-button';
 import Container from '../components/Container';
 import Section from '../components/Section';
-import {
-  AntDesign,
-  FontAwesome,
-  MaterialCommunityIcons,
-} from '@expo/vector-icons';
+import DemoIcon from '../icons/DemoIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ProgressDemoHandler, SocialScreenProps } from '../types';
 
@@ -46,13 +42,10 @@ export default function Social({ navigation }: SocialScreenProps) {
           width={180}
           borderRadius={50}
           raiseLevel={8}
+          accessibilityLabel="Facebook"
+          buttonStyle={{ contentGap: 8 }}
         >
-          <FontAwesome
-            style={[styles.iconLeft, { marginTop: -1 }]}
-            name="facebook-square"
-            size={24}
-            color="white"
-          />
+          <DemoIcon name="facebook-f" size={24} color="white" />
           <Text style={styles.text}>Facebook</Text>
         </ThemedButton>
         <ThemedButton
@@ -66,16 +59,12 @@ export default function Social({ navigation }: SocialScreenProps) {
           accessibilityLabel="X"
           buttonStyle={{
             borderRadius: 8,
+            contentGap: 8,
             raiseAmount: 8,
             pressInAnimationDuration: 140,
           }}
         >
-          <AntDesign
-            style={[styles.iconLeft, { marginTop: 1, marginRight: 5 }]}
-            name="twitter"
-            size={24}
-            color="white"
-          />
+          <DemoIcon name="x-twitter" size={24} color="white" />
           <Text style={styles.text}>X</Text>
         </ThemedButton>
         <ThemedButton
@@ -87,13 +76,10 @@ export default function Social({ navigation }: SocialScreenProps) {
           width={180}
           borderRadius={0}
           raiseLevel={6}
+          accessibilityLabel="Messenger"
+          buttonStyle={{ contentGap: 8 }}
         >
-          <MaterialCommunityIcons
-            style={[styles.iconLeft, { marginTop: 0, marginRight: 4 }]}
-            name="facebook-messenger"
-            size={25}
-            color="white"
-          />
+          <DemoIcon name="facebook-messenger" size={24} color="white" />
           <Text style={styles.text}>Messenger</Text>
         </ThemedButton>
         <ThemedButton
@@ -110,13 +96,10 @@ export default function Social({ navigation }: SocialScreenProps) {
           }
           style={styles.button}
           width={180}
+          accessibilityLabel="Instagram"
+          buttonStyle={{ contentGap: 8 }}
         >
-          <FontAwesome
-            style={[styles.iconLeft, { marginTop: -2, marginRight: 7 }]}
-            name="instagram"
-            size={24}
-            color="white"
-          />
+          <DemoIcon name="instagram" size={24} color="white" />
           <Text style={styles.text}>Instagram</Text>
         </ThemedButton>
       </Section>
@@ -130,13 +113,9 @@ export default function Social({ navigation }: SocialScreenProps) {
           width={60}
           borderRadius={0}
           raiseLevel={0}
+          accessibilityLabel="WhatsApp"
         >
-          <FontAwesome
-            style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
-            name="whatsapp"
-            size={24}
-            color="white"
-          />
+          <DemoIcon name="whatsapp" size={24} color="white" />
         </ThemedButton>
         <ThemedButton
           name={theme}
@@ -147,13 +126,9 @@ export default function Social({ navigation }: SocialScreenProps) {
           width={60}
           borderRadius={0}
           raiseLevel={8}
+          accessibilityLabel="YouTube"
         >
-          <FontAwesome
-            style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
-            name="youtube"
-            size={24}
-            color="white"
-          />
+          <DemoIcon name="youtube" size={24} color="white" />
         </ThemedButton>
         <ThemedButton
           name={theme}
@@ -164,13 +139,9 @@ export default function Social({ navigation }: SocialScreenProps) {
           width={60}
           borderRadius={8}
           raiseLevel={8}
+          accessibilityLabel="LinkedIn"
         >
-          <FontAwesome
-            style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
-            name="linkedin"
-            size={24}
-            color="white"
-          />
+          <DemoIcon name="linkedin-in" size={24} color="white" />
         </ThemedButton>
         <ThemedButton
           name={theme}
@@ -182,13 +153,9 @@ export default function Social({ navigation }: SocialScreenProps) {
           height={60}
           borderRadius={80}
           raiseLevel={8}
+          accessibilityLabel="Pinterest"
         >
-          <FontAwesome
-            style={[styles.iconLeft, { marginTop: 0, marginRight: 0 }]}
-            name="pinterest"
-            size={24}
-            color="white"
-          />
+          <DemoIcon name="pinterest-p" size={24} color="white" />
         </ThemedButton>
       </Section>
     </Container>
@@ -204,5 +171,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
   },
-  iconLeft: { marginRight: 8 },
 });
